@@ -60,6 +60,7 @@ jobs:
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          REF_URL="${REPO_URL}com.google.Antigravity.flatpakref"
           BUILD_DATE=$(date -u +"%Y-%m-%d")
           VERSION="${{ steps.meta.outputs.version }}"
 
@@ -146,10 +147,10 @@ jobs:
               <h2>Command Line Installation</h2>
               <p>If your browser doesn't support the one-click install, use these commands:</p>
               <pre><code># 1. Add the repository
-flatpak remote-add --user --if-not-exists antigravity ${REPO_URL}antigravity.flatpakrepo
+          flatpak remote-add --user --if-not-exists antigravity ${REPO_URL}antigravity.flatpakrepo
 
-# 2. Install the app
-flatpak install antigravity com.google.Antigravity</code></pre>
+          # 2. Install the app
+          flatpak install antigravity com.google.Antigravity</code></pre>
             </div>
             <footer>
               <p>Maintained by <a href="https://github.com/${{ github.repository }}">@${{ github.repository_owner }}</a> • Not affiliated with Google LLC.</p>
@@ -208,7 +209,7 @@ flatpak install antigravity com.google.Antigravity</code></pre>
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "The Flatpak build process failed on the latest branch. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure
