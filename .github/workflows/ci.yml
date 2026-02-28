@@ -5,6 +5,7 @@ on:
     branches: [ latest ]
     paths:
       - 'com.google.Antigravity.yml'
+      - '.github/workflows/ci.yml'
 
 permissions:
   pull-requests: write

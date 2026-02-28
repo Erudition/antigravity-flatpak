@@ -5,6 +5,8 @@ on:
     branches: [ latest ]
     paths:
       - 'com.google.Antigravity.yml'
+      - '.github/workflows/cd.yml'
+      - '.github/scripts/**'
 
 permissions:
   contents: write
