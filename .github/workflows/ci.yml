@@ -1,0 +1,52 @@
+name: CI Build
+
+on:
+  pull_request:
+    branches: [ latest ]
+    paths:
+      - 'com.google.Antigravity.yml'
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  build:
+    name: Build and Verify
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Flatpak
+        id: build
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          repo-dir: repo
+          build-bundle: true
+          bundle: antigravity-preview.flatpak
+          manifest-path: com.google.Antigravity.yml
+          cache: true
+          repository-name: flathub
+          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Upload Preview Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: antigravity-preview-${{ github.event.pull_request.number }}
+          path: antigravity-preview.flatpak
+
+  auto-approve:
+    needs: build
+    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve and Merge Bot PR
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr review "$PR_URL" --approve --body "Automated build successful. Merging to latest."
+          gh pr merge "$PR_URL" --auto --squash
