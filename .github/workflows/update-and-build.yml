@@ -31,7 +31,6 @@ jobs:
           LATEST_URL=$(echo "$DATA" | jq -r '.url')
           LATEST_SHA=$(echo "$DATA" | jq -r '.sha256hash')
           
-          # Extract version from URL (e.g. 1.19.6 from .../stable/1.19.6-6514.../...)
           VERSION=$(echo "$LATEST_URL" | grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+')
 
           if [ -z "$LATEST_URL" ] || [ "$LATEST_URL" == "null" ]; then
@@ -81,7 +80,6 @@ jobs:
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           repo-dir: repo
-          # We enable build-bundle to get a standalone file for GitHub Releases
           build-bundle: true
           bundle: antigravity.flatpak
           manifest-path: com.google.Antigravity.yml
@@ -89,11 +87,17 @@ jobs:
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Extract Version for Meta
+      - name: Extract Metadata
         id: meta
         run: |
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Run the scraper to get release notes
+          NOTES=$(node .github/scripts/extract_changelog.js $VERSION || echo "No official notes found for version $VERSION")
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Enrich Repository Metadata
         run: |
@@ -152,7 +156,6 @@ jobs:
 
   release:
     needs: [build, check-version]
-    # Only create a release if we are on main AND either check-version found an update OR it's a manual run
     if: |
       github.event_name != 'pull_request' &&
       needs.build.result == 'success' &&
@@ -162,10 +165,6 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Download Bundle Artifact
-        # The build job in this workflow doesn't automatically upload artifacts if we don't tell it to, 
-        # but the flatpak-builder action uploads it by default as 'flatpak-artifact'.
-        # However, it's easier to just use the file directly from the runner if we were in the same job.
-        # Since we are in a new job, we'll download it.
         uses: actions/download-artifact@v4
         with:
           name: flatpak-artifact
@@ -176,8 +175,9 @@ jobs:
           tag_name: v${{ needs.build.outputs.version }}
           name: Antigravity v${{ needs.build.outputs.version }}
           body: |
-            Automated build of Google Antigravity version ${{ needs.build.outputs.version }}.
+            ${{ needs.build.outputs.notes }}
             
+            ---
             ### Installation (Flatpak)
             Download the attached `.flatpak` file or add the repository:
             ```bash
