@@ -8,9 +8,15 @@ on:
     branches: [ main ]
     paths:
       - 'com.google.Antigravity.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'com.google.Antigravity.yml'
 
 jobs:
   check-version:
+    # Only run version check on schedule or manual trigger
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -57,7 +63,19 @@ jobs:
 
   build:
     needs: check-version
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check-version.outputs.updated == 'true'
+    # Run if:
+    # 1. It's a push or PR (check-version will be skipped, which is fine with always())
+    # 2. check-version found an update
+    # 3. It was manually triggered (even if no update found)
+    if: |
+      always() &&
+      needs.check-version.result != 'failure' &&
+      (
+        github.event_name == 'push' ||
+        github.event_name == 'pull_request' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.check-version.outputs.updated == 'true'
+      )
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
