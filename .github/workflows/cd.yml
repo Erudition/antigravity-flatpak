@@ -10,6 +10,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  issues: write
 
 jobs:
   release:
@@ -40,7 +41,8 @@ jobs:
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          NOTES=$(node .github/scripts/extract_changelog.js $VERSION || echo "No official notes found for version $VERSION")
+          # Run the scraper. If it fails, the job will fail and trigger the on-failure report.
+          NOTES=$(node .github/scripts/extract_changelog.js $VERSION)
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -108,3 +110,18 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  on-failure:
+    needs: release
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Release Failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo ${{ github.repository }} \
+            --title "Automation Failure: CD Release / Changelog Fetching" \
+            --body "The CD Release process failed. This often happens if the changelog scraper is unable to parse the upstream website or if the build failed on merge. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --label "bug,automation" || true
