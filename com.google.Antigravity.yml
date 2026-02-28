@@ -8,18 +8,9 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
-  # DO NOT REMOVE: Standard session-bus is broken on Guix (xdg-dbus-proxy/symlink issues).
-  # We bypass it by mounting the host bus socket directly and setting the ENV var.
-  - --nosocket=session-bus
-  - --filesystem=/run/user/1000/bus
-  - --filesystem=xdg-run/shepherd:ro
+  - --socket=session-bus
   - --device=dri
   - --filesystem=home
-  - --filesystem=/gnu/store:ro
-  - --filesystem=/var/guix
-  - --filesystem=/run/current-system:ro
-  - --filesystem=~/.guix-profile:ro
-  - --filesystem=~/.guix-home:ro
   - --filesystem=/var/run/docker.sock
   - --filesystem=/etc/ssl:ro
   - --filesystem=/etc/pki:ro
@@ -31,11 +22,9 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Flatpak
   - --talk-name=org.freedesktop.Flatpak
   - --env=XDG_CURRENT_DESKTOP=GNOME
-  # DO NOT REMOVE: Points to the host bus socket mounted via --filesystem above.
-  - --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
   - --env=SSL_CERT_DIR=/etc/ssl/certs
   - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-  - --env=PATH=/app/bin:/usr/bin:~/.guix-home/profile/bin:~/.guix-profile/bin:~/.local/bin
+  - --env=PATH=/app/bin:/usr/bin:/usr/local/bin
 modules:
   - name: antigravity
     buildsystem: simple
@@ -49,47 +38,46 @@ modules:
         cat << 'EOF' > /app/bin/git
         #!/bin/sh
         export SSH_ASKPASS="$HOME/.git-askpass.sh"
-        export DISPLAY=":0"
         if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
             export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
         fi
-        exec flatpak-spawn --host --env=DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" --env=SSH_AUTH_SOCK="$SSH_AUTH_SOCK" --env=SSH_ASKPASS="$SSH_ASKPASS" --env=DISPLAY="$DISPLAY" "$HOME/.guix-profile/bin/git" "$@"
+        exec flatpak-spawn --host git "$@"
         EOF
         chmod +x /app/bin/git
       - |
         cat << 'EOF' > /app/bin/chromium
         #!/bin/sh
-        exec flatpak-spawn --host "$HOME/.guix-profile/bin/chromium" --no-sandbox "$@"
+        exec flatpak-spawn --host chromium "$@"
         EOF
         chmod +x /app/bin/chromium
       - |
         cat << 'EOF' > /app/bin/node
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$@"' bash "$@"
+        exec flatpak-spawn --host node "$@"
         EOF
         chmod +x /app/bin/node
       - |
         cat << 'EOF' > /app/bin/npx
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/npx" "$@"' bash "$@"
+        exec flatpak-spawn --host npx "$@"
         EOF
         chmod +x /app/bin/npx
       - |
         cat << 'EOF' > /app/bin/pnpm
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$HOME/.guix-profile/bin/corepack" pnpm "$@"' bash "$@"
+        exec flatpak-spawn --host pnpm "$@"
         EOF
         chmod +x /app/bin/pnpm
       - |
         cat << 'EOF' > /app/bin/pnpx
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$HOME/.guix-profile/bin/corepack" pnpx "$@"' bash "$@"
+        exec flatpak-spawn --host pnpx "$@"
         EOF
         chmod +x /app/bin/pnpx
       - |
         cat << 'EOF' > /app/bin/wmill
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.local/bin/wmill" "$@"' bash "$@"
+        exec flatpak-spawn --host wmill "$@"
         EOF
         chmod +x /app/bin/wmill
       - |
@@ -101,24 +89,26 @@ modules:
       - |
         cat << 'EOF' > /app/bin/docker
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/docker" "$@"' bash "$@"
+        exec flatpak-spawn --host docker "$@"
         EOF
         chmod +x /app/bin/docker
       - |
         cat << 'EOF' > /app/bin/docker-compose
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/docker-compose" "$@"' bash "$@"
+        exec flatpak-spawn --host docker-compose "$@"
         EOF
         chmod +x /app/bin/docker-compose
       - |
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
         if [ ! -f "$HOME/.git-askpass.sh" ]; then
-          printf "#!/bin/sh\nexec /run/current-system/profile/bin/zenity --password --title=\"Git Authentication\"\n" > "$HOME/.git-askpass.sh"
+          # Fallback to standard zenity, path-based discovery
+          ZENITY_PATH=$(flatpak-spawn --host which zenity 2>/dev/null || echo "zenity")
+          printf "#!/bin/sh\nexec $ZENITY_PATH --password --title=\"Git Authentication\"\n" > "$HOME/.git-askpass.sh"
           chmod +x "$HOME/.git-askpass.sh"
         fi
-        # DO NOT REMOVE: --no-sandbox is required on Guix to prevent "No such file" 
-        # errors when Electron tries to spawn unpatched sandbox helpers.
+        # --no-sandbox is included by default as it is required for unpatched Electron 
+        # binaries in most containerized/Guix environments.
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
         EOF
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
