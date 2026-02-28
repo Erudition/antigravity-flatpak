@@ -28,16 +28,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          repo-dir: repo
-          build-bundle: true
-          bundle: antigravity.flatpak
-          manifest-path: com.google.Antigravity.yml
-          cache: true
-          repository-name: flathub
-          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Build Flatpak and Repository
+        run: |
+          [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          
+          # 1. Build into OSTree repository
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 2. Generate Static Deltas for faster updates and prune old objects
+          flatpak build-update-repo --generate-static-deltas --prune repo
+          
+          # 3. Create standalone bundle
+          flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
         id: meta
@@ -45,7 +48,6 @@ jobs:
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Run scraper and capture output/error
           if node .github/scripts/extract_changelog.js $VERSION > changelog.txt 2> scraper_error.log; then
             echo "notes<<EOF" >> $GITHUB_OUTPUT
             cat changelog.txt >> $GITHUB_OUTPUT
@@ -58,33 +60,108 @@ jobs:
             echo "notes=No official notes found for version $VERSION" >> $GITHUB_OUTPUT
           fi
 
-      - name: Enrich Repository
+      - name: Enrich Repository and Site
         run: |
           mkdir -p repo/icons
-          find .flatpak-builder/rofiles -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
+          find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          BUILD_DATE=$(date -u +"%Y-%m-%d")
+          VERSION="${{ steps.meta.outputs.version }}"
+
+          # 1. Professional Flatpak Remote config
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
           Title=Antigravity
-          Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          Url=${REPO_URL}
           Homepage=https://github.com/${{ github.repository }}
-          Comment=Google Antigravity IDE
-          Icon=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icons/com.google.Antigravity.svg
+          Comment=Google Antigravity IDE (Agentic Platform)
+          Description=Self-updating repository for Google Antigravity.
+          Icon=${REPO_URL}icons/com.google.Antigravity.svg
+          SuggestRemoteName=antigravity
           EOF
 
+          # 2. Professional One-click install ref
+          cat <<EOF > repo/com.google.Antigravity.flatpakref
+          [Flatpak Ref]
+          Title=Antigravity
+          Name=com.google.Antigravity
+          Branch=master
+          Url=${REPO_URL}
+          IsRuntime=false
+          SuggestRemoteName=antigravity
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          EOF
+
+          # 3. Enhanced Landing Page
           cat <<EOF > repo/index.html
           <!DOCTYPE html>
-          <html>
+          <html lang="en">
           <head>
-            <title>Antigravity Flatpak Repository</title>
-            <style>body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; }</style>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Install Google Antigravity</title>
+            <style>
+              :root { --primary: #3858e9; --bg: #ffffff; --text: #24292f; --code-bg: #f6f8fa; --border: #d0d7de; }
+              @media (prefers-color-scheme: dark) {
+                :root { --bg: #0d1117; --text: #c9d1d9; --code-bg: #161b22; --border: #30363d; }
+              }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+              header { display: flex; align-items: center; gap: 30px; margin-bottom: 60px; border-bottom: 1px solid var(--border); padding-bottom: 40px; }
+              .icon { width: 128px; height: 128px; }
+              .header-text { flex: 1; }
+              h1 { margin: 0; font-size: 2.2rem; font-weight: 800; }
+              .tagline { font-size: 1.1rem; opacity: 0.7; margin-top: 4px; }
+              .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-top: 20px; font-size: 0.9rem; }
+              .meta-item b { display: block; opacity: 0.6; font-weight: 400; text-transform: uppercase; font-size: 0.75rem; }
+              .actions { display: flex; flex-direction: column; gap: 12px; min-width: 200px; }
+              .btn { display: inline-block; background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; transition: filter 0.2s; }
+              .btn:hover { filter: brightness(1.1); }
+              .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+              .section { margin-top: 40px; }
+              h2 { font-size: 1.5rem; margin-bottom: 16px; }
+              pre { background: var(--code-bg); padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); }
+              code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.85rem; }
+              footer { margin-top: 100px; text-align: center; font-size: 0.85rem; opacity: 0.5; border-top: 1px solid var(--border); padding-top: 20px; }
+              a { color: var(--primary); text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
           </head>
           <body>
-            <h1>Antigravity Flatpak Repository</h1>
-            <p>Self-updating Flatpak repository for Google Antigravity.</p>
-            <h2>Installation</h2>
-            <pre><code>flatpak remote-add --user --if-not-exists antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo</code></pre>
-            <pre><code>flatpak install antigravity com.google.Antigravity</code></pre>
+            <header>
+              <img src="icons/com.google.Antigravity.svg" alt="Icon" class="icon">
+              <div class="header-text">
+                <h1>Google Antigravity</h1>
+                <p class="tagline">An agentic development platform for the agent-first era</p>
+                <div class="meta-grid">
+                  <div class="meta-item"><b>Version</b>$VERSION</div>
+                  <div class="meta-item"><b>Released</b>$BUILD_DATE</div>
+                  <div class="meta-item"><b>License</b>Proprietary</div>
+                </div>
+              </div>
+              <div class="actions">
+                <a href="flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref" class="btn">Install</a>
+                <a href="com.google.Antigravity.flatpakref" class="btn btn-secondary">Download .flatpakref</a>
+              </div>
+            </header>
+
+            <div class="section">
+              <h2>Description</h2>
+              <p>Google Antigravity is an AI-powered integrated development environment (IDE) that evolves the standard coding experience into an agent-first era. It features autonomous agents that can plan, code, and browse the web to assist in complex software engineering tasks.</p>
+            </div>
+
+            <div class="section">
+              <h2>Command Line Installation</h2>
+              <pre><code># 1. Add the repository
+flatpak remote-add --user --if-not-exists antigravity ${REPO_URL}antigravity.flatpakrepo
+
+# 2. Install the app
+flatpak install antigravity com.google.Antigravity</code></pre>
+            </div>
+
+            <footer>
+              <p>Maintained by <a href="https://github.com/${{ github.repository }}">@${{ github.repository_owner }}</a> • Not affiliated with Google LLC.</p>
+            </footer>
           </body>
           </html>
           EOF
@@ -104,8 +181,12 @@ jobs:
             
             ---
             ### Installation
+            [🚀 **One-Click Install**](flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
+            
+            **Manual install:**
             ```bash
             flatpak remote-add --user antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo
+            flatpak install antigravity com.google.Antigravity
             ```
           files: antigravity.flatpak
           draft: false
@@ -123,19 +204,19 @@ jobs:
         uses: actions/deploy-pages@v4
 
   report-failure:
-    needs: release
-    if: always()
+    needs: [release]
+    if: always() && needs.release.result == 'failure'
     runs-on: ubuntu-latest
     steps:
       - name: Report Build Failure
-        if: needs.release.result == 'failure' && needs.release.outputs.scraper_status != 'failure'
+        if: needs.release.outputs.scraper_status != 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed on the latest branch. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository_of_user }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure
