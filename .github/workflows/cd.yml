@@ -32,8 +32,14 @@ jobs:
         run: |
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # Build into OSTree repository. --disable-rofiles-fuse is critical for CI stability.
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # Generate Static Deltas for faster updates and prune old objects
           flatpak build-update-repo --generate-static-deltas --prune repo
+          
+          # Create standalone bundle
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
@@ -60,7 +66,6 @@ jobs:
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          REF_URL="${REPO_URL}com.google.Antigravity.flatpakref"
           BUILD_DATE=$(date -u +"%Y-%m-%d")
           VERSION="${{ steps.meta.outputs.version }}"
 
@@ -209,7 +214,7 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed on the latest branch. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure

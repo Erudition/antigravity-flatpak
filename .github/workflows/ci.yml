@@ -28,8 +28,8 @@ jobs:
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 2. Build into OSTree repo
-          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          # 2. Build into OSTree repo. --disable-rofiles-fuse is critical for CI stability.
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml
           
           # 3. Update repo metadata with static deltas for performance
           flatpak build-update-repo --generate-static-deltas --prune repo
@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: Report Build Failure
         env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           gh issue create \
