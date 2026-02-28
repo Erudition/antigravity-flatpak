@@ -24,8 +24,16 @@ jobs:
 
       - name: Build Flatpak
         run: |
+          # 1. Ensure machine-id exists for DBus/rofiles-fuse
+          [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
+          
+          # 2. Add Flathub remote for runtimes
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 3. Build using dbus-run-session
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 4. Create preview bundle
           flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity
 
       - name: Upload Preview Bundle

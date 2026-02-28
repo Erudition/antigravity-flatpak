@@ -30,13 +30,16 @@ jobs:
 
       - name: Build Flatpak and Repository
         run: |
-          # 1. Add Flathub remote for runtimes
+          # 1. Ensure machine-id exists for DBus/rofiles-fuse
+          [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
+
+          # 2. Add Flathub remote for runtimes
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 2. Build the app into an OSTree repository
-          flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          # 3. Build into OSTree repository using dbus-run-session
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
           
-          # 3. Create a standalone bundle for the GitHub Release
+          # 4. Create standalone bundle for the GitHub Release
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
