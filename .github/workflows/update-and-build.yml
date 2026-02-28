@@ -60,7 +60,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check-version.outputs.updated == 'true'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
       options: --privileged
     steps:
       - uses: actions/checkout@v4
