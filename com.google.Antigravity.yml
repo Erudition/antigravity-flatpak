@@ -8,27 +8,134 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
-  - --socket=session-bus
+  # DO NOT REMOVE: Standard session-bus is broken on Guix (xdg-dbus-proxy/symlink issues).
+  # We bypass it by mounting the host bus socket directly and setting the ENV var.
+  - --nosocket=session-bus
+  - --filesystem=/run/user/1000/bus
+  - --filesystem=xdg-run/shepherd:ro
   - --device=dri
   - --filesystem=home
+  - --filesystem=/gnu/store:ro
+  - --filesystem=/var/guix
+  - --filesystem=/run/current-system:ro
+  - --filesystem=~/.guix-profile:ro
+  - --filesystem=~/.guix-home:ro
+  - --filesystem=/var/run/docker.sock
+  - --filesystem=/etc/ssl:ro
+  - --filesystem=/etc/pki:ro
+  - --filesystem=xdg-run/keyring
+  - --filesystem=xdg-run/gnupg
   - --talk-name=org.freedesktop.secrets
-  - --env=XDG_CURRENT_DESKTOP=Unity
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.Documents
+  - --talk-name=org.freedesktop.portal.Flatpak
+  - --talk-name=org.freedesktop.Flatpak
+  - --env=XDG_CURRENT_DESKTOP=GNOME
+  # DO NOT REMOVE: Points to the host bus socket mounted via --filesystem above.
+  - --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+  - --env=SSL_CERT_DIR=/etc/ssl/certs
+  - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+  - --env=PATH=/app/bin:/usr/bin:~/.guix-home/profile/bin:~/.guix-profile/bin:~/.local/bin
 modules:
   - name: antigravity
     buildsystem: simple
     build-commands:
-      - mkdir -p /app/lib/antigravity /app/bin
+      - mkdir -p /app/lib/antigravity /app/bin /app/share/applications /app/share/icons/hicolor/scalable/apps
+      - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/app/extensions/antigravity/bin/language_server_linux_x64
+      - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/app/out/vs/platform/browserOnboarding/static/browserOnboarding.html
       - cp -r . /app/lib/antigravity/
+      - |
+        cat << 'EOF' > /app/bin/git
+        #!/bin/sh
+        export SSH_ASKPASS="$HOME/.git-askpass.sh"
+        export DISPLAY=":0"
+        if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
+            export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
+        fi
+        exec flatpak-spawn --host --env=DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" --env=SSH_AUTH_SOCK="$SSH_AUTH_SOCK" --env=SSH_ASKPASS="$SSH_ASKPASS" --env=DISPLAY="$DISPLAY" "$HOME/.guix-profile/bin/git" "$@"
+        EOF
+        chmod +x /app/bin/git
+      - |
+        cat << 'EOF' > /app/bin/chromium
+        #!/bin/sh
+        exec flatpak-spawn --host "$HOME/.guix-profile/bin/chromium" --no-sandbox "$@"
+        EOF
+        chmod +x /app/bin/chromium
+      - |
+        cat << 'EOF' > /app/bin/node
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/node
+      - |
+        cat << 'EOF' > /app/bin/npx
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/npx" "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/npx
+      - |
+        cat << 'EOF' > /app/bin/pnpm
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$HOME/.guix-profile/bin/corepack" pnpm "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/pnpm
+      - |
+        cat << 'EOF' > /app/bin/pnpx
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/node" "$HOME/.guix-profile/bin/corepack" pnpx "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/pnpx
+      - |
+        cat << 'EOF' > /app/bin/wmill
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.local/bin/wmill" "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/wmill
+      - |
+        cat << 'EOF' > /app/bin/host-spawn
+        #!/bin/sh
+        exec flatpak-spawn --host "$@"
+        EOF
+        chmod +x /app/bin/host-spawn
+      - |
+        cat << 'EOF' > /app/bin/docker
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/docker" "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/docker
+      - |
+        cat << 'EOF' > /app/bin/docker-compose
+        #!/bin/sh
+        exec flatpak-spawn --host bash -l -c 'exec "$HOME/.guix-profile/bin/docker-compose" "$@"' bash "$@"
+        EOF
+        chmod +x /app/bin/docker-compose
       - |
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
-        # Disable internal SUID sandbox incompatible with Flatpak
-        export LD_LIBRARY_PATH=/app/lib/antigravity:$LD_LIBRARY_PATH
+        if [ ! -f "$HOME/.git-askpass.sh" ]; then
+          printf "#!/bin/sh\nexec /run/current-system/profile/bin/zenity --password --title=\"Git Authentication\"\n" > "$HOME/.git-askpass.sh"
+          chmod +x "$HOME/.git-askpass.sh"
+        fi
+        # DO NOT REMOVE: --no-sandbox is required on Guix to prevent "No such file" 
+        # errors when Electron tries to spawn unpatched sandbox helpers.
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
         EOF
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
+      - |
+        cat << 'EOF' > /app/share/applications/com.google.Antigravity.desktop
+        [Desktop Entry]
+        Name=Google Antigravity
+        Comment=Google Antigravity Desktop Application
+        Exec=antigravity %u
+        Icon=com.google.Antigravity
+        Type=Application
+        Categories=Development;TextEditor;
+        MimeType=x-scheme-handler/antigravity;
+        StartupWMClass=antigravity
+        EOF
+      - cp resources/app/out/vs/platform/browserOnboarding/static/antigravity.svg /app/share/icons/hicolor/scalable/apps/com.google.Antigravity.svg
     sources:
       - type: archive
-        url: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.13.3-4533425205018624/linux-x64/Antigravity.tar.gz
-        sha256: 084dfbedf1049b363aa3ad7ba679eec8b80feaf29585accb90b5910ebb270048 # Update this if checksum changes
+        url: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.19.6-6514342219874304/linux-x64/Antigravity.tar.gz
+        sha256: 80522c9d60bcc04bb13d40fa136601d184dc83f36bb9065eb29cc456db4c29e1
         strip-components: 1
