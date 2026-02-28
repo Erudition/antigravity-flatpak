@@ -39,8 +39,8 @@ jobs:
             echo "New version detected: $LATEST_URL"
             
             # 3. Update the manifest
-            yq -i ".modules[0].sources[0].url = "$LATEST_URL"" com.google.Antigravity.yml
-            yq -i ".modules[0].sources[0].sha256 = "$LATEST_SHA"" com.google.Antigravity.yml
+            yq -i ".modules[0].sources[0].url = \"$LATEST_URL\"" com.google.Antigravity.yml
+            yq -i ".modules[0].sources[0].sha256 = \"$LATEST_SHA\"" com.google.Antigravity.yml
             
             # 4. Commit the change back to the repo
             git config user.name "github-actions[bot]"
@@ -59,14 +59,17 @@ jobs:
     needs: check-version
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check-version.outputs.updated == 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
 
       - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v1
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: antigravity.flatpak
-          manifest: com.google.Antigravity.yml
+          manifest-path: com.google.Antigravity.yml
           cache: true
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
