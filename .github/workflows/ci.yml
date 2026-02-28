@@ -24,14 +24,15 @@ jobs:
 
       - name: Build Flatpak
         run: |
-          # 1. Ensure machine-id exists for DBus/rofiles-fuse
+          # 1. Setup environment
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
-          
-          # 2. Add Flathub remote for runtimes
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 3. Build using dbus-run-session
+          # 2. Build into OSTree repo
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 3. Update repo metadata
+          flatpak build-update-repo --prune repo
           
           # 4. Create preview bundle
           flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity
@@ -44,7 +45,7 @@ jobs:
 
   auto-approve:
     needs: build
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    if: github.event_pull_request.user.login == 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Approve and Merge Bot PR

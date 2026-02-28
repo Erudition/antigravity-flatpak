@@ -32,7 +32,14 @@ jobs:
         run: |
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          
+          # 1. Build the app into the OSTree repository
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 2. MANDATORY: Update the repository metadata (generates summary and AppStream app-info)
+          flatpak build-update-repo --prune repo
+          
+          # 3. Create a standalone bundle for the GitHub Release
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
@@ -59,7 +66,6 @@ jobs:
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          REF_URL="${REPO_URL}com.google.Antigravity.flatpakref"
           BUILD_DATE=$(date -u +"%Y-%m-%d")
           VERSION="${{ steps.meta.outputs.version }}"
 
