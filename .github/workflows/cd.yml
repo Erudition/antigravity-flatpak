@@ -21,6 +21,8 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       notes: ${{ steps.meta.outputs.notes }}
+      scraper_status: ${{ steps.meta.outputs.scraper_status }}
+      scraper_error: ${{ steps.meta.outputs.error_msg }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,17 +37,24 @@ jobs:
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Extract Metadata
+      - name: Extract Metadata & Scrape Changelog
         id: meta
         run: |
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Run the scraper. If it fails, the job will fail and trigger the on-failure report.
-          NOTES=$(node .github/scripts/extract_changelog.js $VERSION)
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Run scraper and capture output/error
+          if node .github/scripts/extract_changelog.js $VERSION > changelog.txt 2> scraper_error.log; then
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            cat changelog.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "scraper_status=success" >> $GITHUB_OUTPUT
+          else
+            ERROR_MSG=$(head -n 1 scraper_error.log | sed 's/"/\\"/g')
+            echo "scraper_status=failure" >> $GITHUB_OUTPUT
+            echo "error_msg=$ERROR_MSG" >> $GITHUB_OUTPUT
+            echo "notes=No official notes found for version $VERSION" >> $GITHUB_OUTPUT
+          fi
 
       - name: Enrich Repository
         run: |
@@ -111,17 +120,34 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  on-failure:
+  report-failure:
     needs: release
-    if: failure()
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Report Release Failure
+      - name: Report Build Failure
+        if: needs.release.result == 'failure' && needs.release.outputs.scraper_status != 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
             --repo ${{ github.repository }} \
-            --title "Automation Failure: CD Release / Changelog Fetching" \
-            --body "The CD Release process failed. This often happens if the changelog scraper is unable to parse the upstream website or if the build failed on merge. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --title "Automation Failure: Flatpak Build Failed" \
+            --body "The Flatpak build process failed on the latest branch. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --label "bug,automation" || true
+
+      - name: Report Scraper Failure
+        if: needs.release.outputs.scraper_status == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ERROR_MSG: ${{ needs.release.outputs.scraper_error }}
+        run: |
+          gh issue create \
+            --repo ${{ github.repository }} \
+            --title "Changelog Scraper Failed: $ERROR_MSG" \
+            --body "The changelog scraper failed during the release. 
+            
+            **Error:** $ERROR_MSG
+            
+            Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
