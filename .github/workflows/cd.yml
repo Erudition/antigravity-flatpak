@@ -30,16 +30,9 @@ jobs:
 
       - name: Build Flatpak and Repository
         run: |
-          # 1. Ensure machine-id exists for DBus/rofiles-fuse
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
-
-          # 2. Add Flathub remote for runtimes
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          
-          # 3. Build into OSTree repository using dbus-run-session
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
-          
-          # 4. Create standalone bundle for the GitHub Release
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
@@ -60,33 +53,95 @@ jobs:
             echo "notes=No official notes found for version $VERSION" >> $GITHUB_OUTPUT
           fi
 
-      - name: Enrich Repository
+      - name: Enrich Repository and Site
         run: |
           mkdir -p repo/icons
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
+          # 1. Flatpak Remote config
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
           Title=Antigravity
           Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           Homepage=https://github.com/${{ github.repository }}
           Comment=Google Antigravity IDE
+          Description=An agentic development platform that aims to evolve the IDE into an agent-first era.
           Icon=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icons/com.google.Antigravity.svg
           EOF
 
+          # 2. One-click install ref
+          cat <<EOF > repo/com.google.Antigravity.flatpakref
+          [Flatpak Ref]
+          Title=Antigravity
+          Name=com.google.Antigravity
+          Branch=master
+          Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          IsRuntime=false
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          EOF
+
+          # 3. Flathub-style Landing Page
           cat <<EOF > repo/index.html
           <!DOCTYPE html>
-          <html>
+          <html lang="en">
           <head>
-            <title>Antigravity Flatpak Repository</title>
-            <style>body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; }</style>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Install Google Antigravity</title>
+            <style>
+              :root { --primary: #3858e9; --bg: #ffffff; --text: #24292f; --code-bg: #f6f8fa; }
+              @media (prefers-color-scheme: dark) {
+                :root { --bg: #0d1117; --text: #c9d1d9; --code-bg: #161b22; }
+              }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+              header { text-align: center; margin-bottom: 60px; }
+              .icon { width: 128px; height: 128px; margin-bottom: 20px; }
+              h1 { margin: 0; font-size: 2.5rem; font-weight: 800; }
+              .tagline { font-size: 1.25rem; opacity: 0.8; margin-top: 8px; }
+              .actions { display: flex; justify-content: center; gap: 20px; margin: 40px 0; }
+              .btn { background: var(--primary); color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: filter 0.2s; }
+              .btn:hover { filter: brightness(1.1); }
+              .section { margin-top: 60px; }
+              h2 { border-bottom: 1px solid #30363d; padding-bottom: 8px; margin-bottom: 24px; }
+              pre { background: var(--code-bg); padding: 16px; border-radius: 8px; overflow-x: auto; position: relative; }
+              code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9rem; }
+              .copy-hint { font-size: 0.8rem; opacity: 0.6; margin-top: -15px; margin-bottom: 20px; }
+              footer { margin-top: 100px; text-align: center; font-size: 0.9rem; opacity: 0.6; }
+              a { color: var(--primary); text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
           </head>
           <body>
-            <h1>Antigravity Flatpak Repository</h1>
-            <p>Self-updating Flatpak repository for Google Antigravity.</p>
-            <h2>Installation</h2>
-            <pre><code>flatpak remote-add --user --if-not-exists antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo</code></pre>
-            <pre><code>flatpak install antigravity com.google.Antigravity</code></pre>
+            <header>
+              <img src="icons/com.google.Antigravity.svg" alt="Icon" class="icon">
+              <h1>Google Antigravity</h1>
+              <p class="tagline">An agentic development platform for the agent-first era</p>
+              <div class="actions">
+                <a href="com.google.Antigravity.flatpakref" class="btn">Install</a>
+              </div>
+            </header>
+
+            <div class="section">
+              <h2>Manual Installation</h2>
+              <p>To manually add the repository and install the application, run the following commands in your terminal:</p>
+              
+              <p><strong>1. Add the remote repository</strong></p>
+              <pre><code>flatpak remote-add --user --if-not-exists antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo</code></pre>
+              
+              <p><strong>2. Install the application</strong></p>
+              <pre><code>flatpak install antigravity com.google.Antigravity</code></pre>
+            </div>
+
+            <div class="section">
+              <h2>Updates</h2>
+              <p>Once installed, Antigravity will stay up to date automatically with your system updates. You can also force an update at any time:</p>
+              <pre><code>flatpak update</code></pre>
+            </div>
+
+            <footer>
+              <p>Built and hosted by <a href="https://github.com/${{ github.repository }}">@${{ github.repository_owner }}</a></p>
+              <p>Based on official builds from <a href="https://antigravity.google">antigravity.google</a></p>
+            </footer>
           </body>
           </html>
           EOF
@@ -106,6 +161,9 @@ jobs:
             
             ---
             ### Installation
+            [Click here to install via your Software Center](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
+            
+            Or add the repository manually:
             ```bash
             flatpak remote-add --user antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo
             ```
