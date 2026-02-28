@@ -37,7 +37,6 @@ modules:
       - |
         cat << 'EOF' > /app/bin/git
         #!/bin/sh
-        export SSH_ASKPASS="$HOME/.git-askpass.sh"
         if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
             export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
         fi
@@ -101,12 +100,6 @@ modules:
       - |
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
-        if [ ! -f "$HOME/.git-askpass.sh" ]; then
-          # Fallback to standard zenity, path-based discovery
-          ZENITY_PATH=$(flatpak-spawn --host which zenity 2>/dev/null || echo "zenity")
-          printf "#!/bin/sh\nexec $ZENITY_PATH --password --title=\"Git Authentication\"\n" > "$HOME/.git-askpass.sh"
-          chmod +x "$HOME/.git-askpass.sh"
-        fi
         # --no-sandbox is included by default as it is required for unpatched Electron 
         # binaries in most containerized/Guix environments.
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
