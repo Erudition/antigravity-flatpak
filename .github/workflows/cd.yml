@@ -33,13 +33,13 @@ jobs:
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 1. Build the app into the OSTree repository
+          # 1. Build into OSTree repository
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
           
-          # 2. MANDATORY: Update the repository metadata (generates summary and AppStream app-info)
-          flatpak build-update-repo --prune repo
+          # 2. Generate Static Deltas for faster updates and prune old objects
+          flatpak build-update-repo --generate-static-deltas --prune repo
           
-          # 3. Create a standalone bundle for the GitHub Release
+          # 3. Create standalone bundle
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
@@ -69,18 +69,19 @@ jobs:
           BUILD_DATE=$(date -u +"%Y-%m-%d")
           VERSION="${{ steps.meta.outputs.version }}"
 
-          # 1. Flatpak Remote config
+          # 1. Professional Flatpak Remote config
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
           Title=Antigravity
           Url=${REPO_URL}
           Homepage=https://github.com/${{ github.repository }}
-          Comment=Google Antigravity IDE
-          Description=An agentic development platform that aims to evolve the IDE into an agent-first era.
+          Comment=Google Antigravity IDE (Agentic Platform)
+          Description=Self-updating repository for Google Antigravity.
           Icon=${REPO_URL}icons/com.google.Antigravity.svg
+          SuggestRemoteName=antigravity
           EOF
 
-          # 2. One-click install ref
+          # 2. Professional One-click install ref
           cat <<EOF > repo/com.google.Antigravity.flatpakref
           [Flatpak Ref]
           Title=Antigravity
@@ -88,10 +89,11 @@ jobs:
           Branch=master
           Url=${REPO_URL}
           IsRuntime=false
+          SuggestRemoteName=antigravity
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           EOF
 
-          # 3. Flathub-style Landing Page
+          # 3. Enhanced Landing Page
           cat <<EOF > repo/index.html
           <!DOCTYPE html>
           <html lang="en">
@@ -150,7 +152,6 @@ jobs:
 
             <div class="section">
               <h2>Command Line Installation</h2>
-              <p>If your browser doesn't support the one-click install, use these commands:</p>
               <pre><code># 1. Add the repository
 flatpak remote-add --user --if-not-exists antigravity ${REPO_URL}antigravity.flatpakrepo
 
@@ -180,11 +181,9 @@ flatpak install antigravity com.google.Antigravity</code></pre>
             
             ---
             ### Installation
-            [🚀 **One-Click Install** (Direct)](flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
+            [🚀 **One-Click Install**](flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
             
-            [📦 Download .flatpakref](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
-            
-            **Manual terminal install:**
+            **Manual install:**
             ```bash
             flatpak remote-add --user antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo
             flatpak install antigravity com.google.Antigravity
@@ -217,7 +216,7 @@ flatpak install antigravity com.google.Antigravity</code></pre>
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed on the latest branch. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository_of_user }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure
