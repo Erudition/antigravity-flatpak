@@ -23,16 +23,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Flatpak
-        id: build
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          repo-dir: repo
-          build-bundle: true
-          bundle: antigravity-preview.flatpak
-          manifest-path: com.google.Antigravity.yml
-          cache: true
-          repository-name: flathub
-          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity
 
       - name: Upload Preview Bundle
         uses: actions/upload-artifact@v4
@@ -66,5 +60,5 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Build failed for PR #$PR_NUMBER" \
-            --body "The automated build for the version update in PR #$PR_NUMBER failed. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --body "The automated build for the version update in PR #$PR_NUMBER failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true

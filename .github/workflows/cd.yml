@@ -28,16 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          repo-dir: repo
-          build-bundle: true
-          bundle: antigravity.flatpak
-          manifest-path: com.google.Antigravity.yml
-          cache: true
-          repository-name: flathub
-          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Build Flatpak and Repository
+        run: |
+          # 1. Add Flathub remote for runtimes
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          
+          # 2. Build the app into an OSTree repository
+          flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          
+          # 3. Create a standalone bundle for the GitHub Release
+          flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
         id: meta
@@ -45,7 +45,6 @@ jobs:
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Run scraper and capture output/error
           if node .github/scripts/extract_changelog.js $VERSION > changelog.txt 2> scraper_error.log; then
             echo "notes<<EOF" >> $GITHUB_OUTPUT
             cat changelog.txt >> $GITHUB_OUTPUT
@@ -61,7 +60,7 @@ jobs:
       - name: Enrich Repository
         run: |
           mkdir -p repo/icons
-          find .flatpak-builder/rofiles -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
+          find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
@@ -123,19 +122,19 @@ jobs:
         uses: actions/deploy-pages@v4
 
   report-failure:
-    needs: release
-    if: always()
+    needs: [release]
+    if: always() && needs.release.result == 'failure'
     runs-on: ubuntu-latest
     steps:
       - name: Report Build Failure
-        if: needs.release.result == 'failure' && needs.release.outputs.scraper_status != 'failure'
+        if: needs.release.outputs.scraper_status != 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed on the latest branch. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --body "The Flatpak build process failed on the latest branch. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure
