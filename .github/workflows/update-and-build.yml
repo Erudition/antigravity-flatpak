@@ -74,7 +74,8 @@ jobs:
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          repository: repo
+          repo-dir: repo
+          build-bundle: false
           manifest-path: com.google.Antigravity.yml
           cache: true
           repository-name: flathub
