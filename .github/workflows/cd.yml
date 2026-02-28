@@ -32,14 +32,8 @@ jobs:
         run: |
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          
-          # 1. Build into OSTree repository
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build-dir com.google.Antigravity.yml
-          
-          # 2. Generate Static Deltas for faster updates and prune old objects
           flatpak build-update-repo --generate-static-deltas --prune repo
-          
-          # 3. Create standalone bundle
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
 
       - name: Extract Metadata & Scrape Changelog
@@ -66,10 +60,10 @@ jobs:
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          REF_URL="${REPO_URL}com.google.Antigravity.flatpakref"
           BUILD_DATE=$(date -u +"%Y-%m-%d")
           VERSION="${{ steps.meta.outputs.version }}"
 
-          # 1. Professional Flatpak Remote config
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
           Title=Antigravity
@@ -81,7 +75,6 @@ jobs:
           SuggestRemoteName=antigravity
           EOF
 
-          # 2. Professional One-click install ref
           cat <<EOF > repo/com.google.Antigravity.flatpakref
           [Flatpak Ref]
           Title=Antigravity
@@ -93,7 +86,6 @@ jobs:
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           EOF
 
-          # 3. Enhanced Landing Page
           cat <<EOF > repo/index.html
           <!DOCTYPE html>
           <html lang="en">
@@ -204,7 +196,7 @@ flatpak install antigravity com.google.Antigravity</code></pre>
         uses: actions/deploy-pages@v4
 
   report-failure:
-    needs: [release]
+    needs: release
     if: always() && needs.release.result == 'failure'
     runs-on: ubuntu-latest
     steps:
@@ -216,7 +208,7 @@ flatpak install antigravity com.google.Antigravity</code></pre>
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository_of_user }}/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}" \
+            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug,automation" || true
 
       - name: Report Scraper Failure
