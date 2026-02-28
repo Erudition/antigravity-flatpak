@@ -81,17 +81,44 @@ jobs:
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Create flatpakrepo file
+      - name: Enrich Repository Metadata
         run: |
+          mkdir -p repo/icons
+          # The icon is inside the build-commands of the manifest, but we can extract it from the source
+          # Since we don't have the archive here, we'll try to find it in the build-dir if available
+          # but the easiest way is to just grab it from the repo we just built.
+          find .flatpak-builder/rofiles -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
+          
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
-          Title=Antigravity
+          Title=Antigravity (Custom)
           Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           Homepage=https://github.com/${{ github.repository }}
-          Comment=Google Antigravity IDE
-          Description=An agentic development platform for the agent-first era.
+          Comment=Google Antigravity IDE (Agent-first development)
+          Description=An agentic development platform that aims to evolve the IDE into an agent-first era.
           Icon=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icons/com.google.Antigravity.svg
-          GPGKey=
+          EOF
+
+          cat <<EOF > repo/index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Antigravity Flatpak Repository</title>
+            <style>body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; }</style>
+          </head>
+          <body>
+            <h1>Antigravity Flatpak Repository</h1>
+            <p>This is a self-updating Flatpak repository for Google Antigravity.</p>
+            
+            <h2>Installation</h2>
+            <pre><code>flatpak remote-add --user --if-not-exists antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo</code></pre>
+            <pre><code>flatpak install antigravity com.google.Antigravity</code></pre>
+            
+            <h2>Updates</h2>
+            <p>Once installed, the app will update automatically with your system updates, or via:</p>
+            <pre><code>flatpak update</code></pre>
+          </body>
+          </html>
           EOF
 
       - name: Upload Pages Artifact
@@ -102,7 +129,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
