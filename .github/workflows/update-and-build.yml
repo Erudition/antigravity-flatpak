@@ -55,7 +55,6 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add com.google.Antigravity.yml
-            # Use [skip ci] to prevent the push from triggering a redundant concurrent run
             git commit -m "chore: update Antigravity to version $VERSION [skip ci]"
             git push
             
@@ -69,7 +68,7 @@ jobs:
     needs: check-version
     if: |
       always() &&
-      needs.check-version.result != 'failure' &&
+      (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
       (
         github.event_name == 'push' ||
         github.event_name == 'pull_request' ||
@@ -166,8 +165,10 @@ jobs:
   release:
     needs: [build, check-version]
     if: |
+      always() &&
       github.event_name != 'pull_request' &&
       needs.build.result == 'success' &&
+      (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
       (needs.check-version.outputs.updated == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     runs-on: ubuntu-latest
     steps:
