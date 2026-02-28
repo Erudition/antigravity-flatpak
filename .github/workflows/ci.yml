@@ -9,6 +9,7 @@ on:
 permissions:
   pull-requests: write
   contents: write
+  issues: write
 
 jobs:
   build:
@@ -50,3 +51,19 @@ jobs:
         run: |
           gh pr review "$PR_URL" --approve --body "Automated build successful. Merging to latest."
           gh pr merge "$PR_URL" --auto --squash
+
+  on-build-failure:
+    needs: build
+    if: failure() && github.event.pull_request.user.login == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Build Failure
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh issue create \
+            --repo ${{ github.repository }} \
+            --title "Automation Failure: Build failed for PR #$PR_NUMBER" \
+            --body "The automated build for the version update in PR #$PR_NUMBER failed. Please check the [Actions run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details." \
+            --label "bug,automation" || true
