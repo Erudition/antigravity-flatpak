@@ -58,15 +58,20 @@ jobs:
           mkdir -p repo/icons
           find build-dir -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          REF_URL="${REPO_URL}com.google.Antigravity.flatpakref"
+          BUILD_DATE=$(date -u +"%Y-%m-%d")
+          VERSION="${{ steps.meta.outputs.version }}"
+
           # 1. Flatpak Remote config
           cat <<EOF > repo/antigravity.flatpakrepo
           [Flatpak Repo]
           Title=Antigravity
-          Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          Url=${REPO_URL}
           Homepage=https://github.com/${{ github.repository }}
           Comment=Google Antigravity IDE
           Description=An agentic development platform that aims to evolve the IDE into an agent-first era.
-          Icon=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icons/com.google.Antigravity.svg
+          Icon=${REPO_URL}icons/com.google.Antigravity.svg
           EOF
 
           # 2. One-click install ref
@@ -75,7 +80,7 @@ jobs:
           Title=Antigravity
           Name=com.google.Antigravity
           Branch=master
-          Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          Url=${REPO_URL}
           IsRuntime=false
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           EOF
@@ -89,24 +94,27 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Install Google Antigravity</title>
             <style>
-              :root { --primary: #3858e9; --bg: #ffffff; --text: #24292f; --code-bg: #f6f8fa; }
+              :root { --primary: #3858e9; --bg: #ffffff; --text: #24292f; --code-bg: #f6f8fa; --border: #d0d7de; }
               @media (prefers-color-scheme: dark) {
-                :root { --bg: #0d1117; --text: #c9d1d9; --code-bg: #161b22; }
+                :root { --bg: #0d1117; --text: #c9d1d9; --code-bg: #161b22; --border: #30363d; }
               }
               body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-              header { text-align: center; margin-bottom: 60px; }
-              .icon { width: 128px; height: 128px; margin-bottom: 20px; }
-              h1 { margin: 0; font-size: 2.5rem; font-weight: 800; }
-              .tagline { font-size: 1.25rem; opacity: 0.8; margin-top: 8px; }
-              .actions { display: flex; justify-content: center; gap: 20px; margin: 40px 0; }
-              .btn { background: var(--primary); color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: filter 0.2s; }
+              header { display: flex; align-items: center; gap: 30px; margin-bottom: 60px; border-bottom: 1px solid var(--border); padding-bottom: 40px; }
+              .icon { width: 128px; height: 128px; }
+              .header-text { flex: 1; }
+              h1 { margin: 0; font-size: 2.2rem; font-weight: 800; }
+              .tagline { font-size: 1.1rem; opacity: 0.7; margin-top: 4px; }
+              .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-top: 20px; font-size: 0.9rem; }
+              .meta-item b { display: block; opacity: 0.6; font-weight: 400; text-transform: uppercase; font-size: 0.75rem; }
+              .actions { display: flex; flex-direction: column; gap: 12px; min-width: 200px; }
+              .btn { display: inline-block; background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; transition: filter 0.2s; }
               .btn:hover { filter: brightness(1.1); }
-              .section { margin-top: 60px; }
-              h2 { border-bottom: 1px solid #30363d; padding-bottom: 8px; margin-bottom: 24px; }
-              pre { background: var(--code-bg); padding: 16px; border-radius: 8px; overflow-x: auto; position: relative; }
-              code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9rem; }
-              .copy-hint { font-size: 0.8rem; opacity: 0.6; margin-top: -15px; margin-bottom: 20px; }
-              footer { margin-top: 100px; text-align: center; font-size: 0.9rem; opacity: 0.6; }
+              .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+              .section { margin-top: 40px; }
+              h2 { font-size: 1.5rem; margin-bottom: 16px; }
+              pre { background: var(--code-bg); padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); }
+              code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.85rem; }
+              footer { margin-top: 100px; text-align: center; font-size: 0.85rem; opacity: 0.5; border-top: 1px solid var(--border); padding-top: 20px; }
               a { color: var(--primary); text-decoration: none; }
               a:hover { text-decoration: underline; }
             </style>
@@ -114,33 +122,38 @@ jobs:
           <body>
             <header>
               <img src="icons/com.google.Antigravity.svg" alt="Icon" class="icon">
-              <h1>Google Antigravity</h1>
-              <p class="tagline">An agentic development platform for the agent-first era</p>
+              <div class="header-text">
+                <h1>Google Antigravity</h1>
+                <p class="tagline">An agentic development platform for the agent-first era</p>
+                <div class="meta-grid">
+                  <div class="meta-item"><b>Version</b>$VERSION</div>
+                  <div class="meta-item"><b>Released</b>$BUILD_DATE</div>
+                  <div class="meta-item"><b>License</b>Proprietary</div>
+                </div>
+              </div>
               <div class="actions">
-                <a href="com.google.Antigravity.flatpakref" class="btn">Install</a>
+                <a href="flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref" class="btn">Install</a>
+                <a href="com.google.Antigravity.flatpakref" class="btn btn-secondary">Download .flatpakref</a>
               </div>
             </header>
 
             <div class="section">
-              <h2>Manual Installation</h2>
-              <p>To manually add the repository and install the application, run the following commands in your terminal:</p>
-              
-              <p><strong>1. Add the remote repository</strong></p>
-              <pre><code>flatpak remote-add --user --if-not-exists antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo</code></pre>
-              
-              <p><strong>2. Install the application</strong></p>
-              <pre><code>flatpak install antigravity com.google.Antigravity</code></pre>
+              <h2>Description</h2>
+              <p>Google Antigravity is an AI-powered integrated development environment (IDE) that evolves the standard coding experience into an agent-first era. It features autonomous agents that can plan, code, and browse the web to assist in complex software engineering tasks.</p>
             </div>
 
             <div class="section">
-              <h2>Updates</h2>
-              <p>Once installed, Antigravity will stay up to date automatically with your system updates. You can also force an update at any time:</p>
-              <pre><code>flatpak update</code></pre>
+              <h2>Command Line Installation</h2>
+              <p>If your browser doesn't support the one-click install, use these commands:</p>
+              <pre><code># 1. Add the repository
+flatpak remote-add --user --if-not-exists antigravity ${REPO_URL}antigravity.flatpakrepo
+
+# 2. Install the app
+flatpak install antigravity com.google.Antigravity</code></pre>
             </div>
 
             <footer>
-              <p>Built and hosted by <a href="https://github.com/${{ github.repository }}">@${{ github.repository_owner }}</a></p>
-              <p>Based on official builds from <a href="https://antigravity.google">antigravity.google</a></p>
+              <p>Maintained by <a href="https://github.com/${{ github.repository }}">@${{ github.repository_owner }}</a> • Not affiliated with Google LLC.</p>
             </footer>
           </body>
           </html>
@@ -161,11 +174,14 @@ jobs:
             
             ---
             ### Installation
-            [Click here to install via your Software Center](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
+            [🚀 **One-Click Install** (Direct)](flatpak+https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
             
-            Or add the repository manually:
+            [📦 Download .flatpakref](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/com.google.Antigravity.flatpakref)
+            
+            **Manual terminal install:**
             ```bash
             flatpak remote-add --user antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo
+            flatpak install antigravity com.google.Antigravity
             ```
           files: antigravity.flatpak
           draft: false
