@@ -1,0 +1,78 @@
+name: Update and Build Flatpak
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Check every 6 hours
+  workflow_dispatch:      # Allow manual trigger
+  push:
+    branches: [ main ]
+    paths:
+      - 'com.google.Antigravity.yml'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      updated: ${{ steps.update.outputs.updated }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Latest Release Info
+        id: update
+        run: |
+          # 1. Get latest data from the API
+          DATA=$(curl -s https://antigravity-auto-updater-974169037036.us-central1.run.app/api/update/linux-x64/stable/0/0)
+          LATEST_URL=$(echo "$DATA" | jq -r '.url')
+          LATEST_SHA=$(echo "$DATA" | jq -r '.sha256hash')
+
+          if [ -z "$LATEST_URL" ] || [ "$LATEST_URL" == "null" ]; then
+            echo "Error: Could not fetch latest URL"
+            exit 1
+          fi
+
+          # 2. Extract current URL from manifest to compare
+          CURRENT_URL=$(yq -r '.modules[0].sources[0].url' com.google.Antigravity.yml)
+
+          if [ "$LATEST_URL" != "$CURRENT_URL" ]; then
+            echo "New version detected: $LATEST_URL"
+            
+            # 3. Update the manifest
+            yq -i ".modules[0].sources[0].url = "$LATEST_URL"" com.google.Antigravity.yml
+            yq -i ".modules[0].sources[0].sha256 = "$LATEST_SHA"" com.google.Antigravity.yml
+            
+            # 4. Commit the change back to the repo
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add com.google.Antigravity.yml
+            git commit -m "chore: update Antigravity to latest release"
+            git push
+            
+            echo "updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "Already up to date."
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-version
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check-version.outputs.updated == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v1
+        with:
+          bundle: antigravity.flatpak
+          manifest: com.google.Antigravity.yml
+          cache: true
+          repository-name: flathub
+          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Upload Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: antigravity-flatpak
+          path: antigravity.flatpak
