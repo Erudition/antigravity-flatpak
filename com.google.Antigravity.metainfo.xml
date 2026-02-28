@@ -27,7 +27,7 @@
     </screenshot>
   </screenshots>
   <developer_name>Google LLC</developer_name>
-  <update_contact>adroit1+git@pm.me</update_contact>
+  <update_contact>https://github.com/Erudition/antigravity-flatpak/issues</update_contact>
   <provides>
     <binary>antigravity</binary>
   </provides>
