@@ -13,13 +13,16 @@ on:
     paths:
       - 'com.google.Antigravity.yml'
 
+# Permissions needed for GitHub Pages deployment
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   check-version:
-    # Only run version check on schedule or manual trigger
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       updated: ${{ steps.update.outputs.updated }}
     steps:
@@ -28,7 +31,6 @@ jobs:
       - name: Fetch Latest Release Info
         id: update
         run: |
-          # 1. Get latest data from the API
           DATA=$(curl -s https://antigravity-auto-updater-974169037036.us-central1.run.app/api/update/linux-x64/stable/0/0)
           LATEST_URL=$(echo "$DATA" | jq -r '.url')
           LATEST_SHA=$(echo "$DATA" | jq -r '.sha256hash')
@@ -38,17 +40,12 @@ jobs:
             exit 1
           fi
 
-          # 2. Extract current URL from manifest to compare
           CURRENT_URL=$(yq -r '.modules[0].sources[0].url' com.google.Antigravity.yml)
 
           if [ "$LATEST_URL" != "$CURRENT_URL" ]; then
-            echo "New version detected: $LATEST_URL"
-            
-            # 3. Update the manifest
             yq -i ".modules[0].sources[0].url = \"$LATEST_URL\"" com.google.Antigravity.yml
             yq -i ".modules[0].sources[0].sha256 = \"$LATEST_SHA\"" com.google.Antigravity.yml
             
-            # 4. Commit the change back to the repo
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add com.google.Antigravity.yml
@@ -57,16 +54,11 @@ jobs:
             
             echo "updated=true" >> $GITHUB_OUTPUT
           else
-            echo "Already up to date."
             echo "updated=false" >> $GITHUB_OUTPUT
           fi
 
   build:
     needs: check-version
-    # Run if:
-    # 1. It's a push or PR (check-version will be skipped, which is fine with always())
-    # 2. check-version found an update
-    # 3. It was manually triggered (even if no update found)
     if: |
       always() &&
       needs.check-version.result != 'failure' &&
@@ -86,14 +78,39 @@ jobs:
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: antigravity.flatpak
+          repository: repo
           manifest-path: com.google.Antigravity.yml
           cache: true
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Upload Bundle
-        uses: actions/upload-artifact@v4
+      - name: Create flatpakrepo file
+        run: |
+          cat <<EOF > repo/antigravity.flatpakrepo
+          [Flatpak Repo]
+          Title=Antigravity
+          Url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          Homepage=https://github.com/${{ github.repository }}
+          Comment=Google Antigravity IDE
+          Description=An agentic development platform for the agent-first era.
+          Icon=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icons/com.google.Antigravity.svg
+          GPGKey=
+          EOF
+
+      - name: Upload Pages Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: antigravity-flatpak
-          path: antigravity.flatpak
+          path: repo
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
