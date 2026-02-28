@@ -6,12 +6,8 @@ on:
   workflow_dispatch:      # Allow manual trigger
   push:
     branches: [ main ]
-    paths:
-      - 'com.google.Antigravity.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'com.google.Antigravity.yml'
 
 # Permissions needed for GitHub Pages deployment
 permissions:
