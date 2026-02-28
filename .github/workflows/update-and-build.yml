@@ -9,7 +9,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# Permissions needed for GitHub Pages deployment
 permissions:
   contents: write
   pages: write
@@ -21,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       updated: ${{ steps.update.outputs.updated }}
+      version: ${{ steps.update.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +30,9 @@ jobs:
           DATA=$(curl -s https://antigravity-auto-updater-974169037036.us-central1.run.app/api/update/linux-x64/stable/0/0)
           LATEST_URL=$(echo "$DATA" | jq -r '.url')
           LATEST_SHA=$(echo "$DATA" | jq -r '.sha256hash')
+          
+          # Extract version from URL (e.g. 1.19.6 from .../stable/1.19.6-6514.../...)
+          VERSION=$(echo "$LATEST_URL" | grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+')
 
           if [ -z "$LATEST_URL" ] || [ "$LATEST_URL" == "null" ]; then
             echo "Error: Could not fetch latest URL"
@@ -45,10 +48,11 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add com.google.Antigravity.yml
-            git commit -m "chore: update Antigravity to latest release"
+            git commit -m "chore: update Antigravity to version $VERSION"
             git push
             
             echo "updated=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "updated=false" >> $GITHUB_OUTPUT
           fi
@@ -68,6 +72,8 @@ jobs:
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
       options: --privileged
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,18 +81,23 @@ jobs:
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           repo-dir: repo
-          build-bundle: false
+          # We enable build-bundle to get a standalone file for GitHub Releases
+          build-bundle: true
+          bundle: antigravity.flatpak
           manifest-path: com.google.Antigravity.yml
           cache: true
           repository-name: flathub
           repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
 
+      - name: Extract Version for Meta
+        id: meta
+        run: |
+          VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Enrich Repository Metadata
         run: |
           mkdir -p repo/icons
-          # The icon is inside the build-commands of the manifest, but we can extract it from the source
-          # Since we don't have the archive here, we'll try to find it in the build-dir if available
-          # but the easiest way is to just grab it from the repo we just built.
           find .flatpak-builder/rofiles -name "com.google.Antigravity.svg" -exec cp {} repo/icons/ \; || true
           
           cat <<EOF > repo/antigravity.flatpakrepo
@@ -138,3 +149,40 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  release:
+    needs: [build, check-version]
+    # Only create a release if we are on main AND either check-version found an update OR it's a manual run
+    if: |
+      github.event_name != 'pull_request' &&
+      needs.build.result == 'success' &&
+      (needs.check-version.outputs.updated == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Bundle Artifact
+        # The build job in this workflow doesn't automatically upload artifacts if we don't tell it to, 
+        # but the flatpak-builder action uploads it by default as 'flatpak-artifact'.
+        # However, it's easier to just use the file directly from the runner if we were in the same job.
+        # Since we are in a new job, we'll download it.
+        uses: actions/download-artifact@v4
+        with:
+          name: flatpak-artifact
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: Antigravity v${{ needs.build.outputs.version }}
+          body: |
+            Automated build of Google Antigravity version ${{ needs.build.outputs.version }}.
+            
+            ### Installation (Flatpak)
+            Download the attached `.flatpak` file or add the repository:
+            ```bash
+            flatpak remote-add --user antigravity https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/antigravity.flatpakrepo
+            ```
+          files: antigravity.flatpak
+          draft: false
+          prerelease: false
