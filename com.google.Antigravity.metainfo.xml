@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.google.Antigravity</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Google Antigravity</name>
+  <summary>An agentic development platform for the agent-first era</summary>
+  <description>
+    <p>
+      Google Antigravity is an AI-powered integrated development environment (IDE) that evolves the standard coding experience into an agent-first era. It features autonomous agents that can plan, code, and browse the web to assist in complex software engineering tasks.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Autonomous AI agents for planning and implementation</li>
+      <li>Rich Artifacts for transparent agent communication</li>
+      <li>Integrated knowledge management</li>
+      <li>Full terminal and tool integration within a sandboxed environment</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">com.google.Antigravity.desktop</launchable>
+  <url type="homepage">https://antigravity.google</url>
+  <url type="help">https://antigravity.google/support</url>
+  <url type="bugtracker">https://antigravity.google/support</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://antigravity.google/assets/image/sitecards/sitecard-default.png</image>
+    </screenshot>
+  </screenshots>
+  <developer_name>Google LLC</developer_name>
+  <update_contact>adroit1+git@pm.me</update_contact>
+  <provides>
+    <binary>antigravity</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+</component>

@@ -40,10 +40,11 @@ modules:
   - name: antigravity
     buildsystem: simple
     build-commands:
-      - mkdir -p /app/lib/antigravity /app/bin /app/share/applications /app/share/icons/hicolor/scalable/apps
+      - mkdir -p /app/lib/antigravity /app/bin /app/share/applications /app/share/icons/hicolor/scalable/apps /app/share/metainfo
       - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/app/extensions/antigravity/bin/language_server_linux_x64
       - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/app/out/vs/platform/browserOnboarding/static/browserOnboarding.html
       - cp -r . /app/lib/antigravity/
+      - cp com.google.Antigravity.metainfo.xml /app/share/metainfo/com.google.Antigravity.metainfo.xml
       - |
         cat << 'EOF' > /app/bin/git
         #!/bin/sh
@@ -139,3 +140,5 @@ modules:
         url: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.19.6-6514342219874304/linux-x64/Antigravity.tar.gz
         sha256: 80522c9d60bcc04bb13d40fa136601d184dc83f36bb9065eb29cc456db4c29e1
         strip-components: 1
+      - type: file
+        path: com.google.Antigravity.metainfo.xml
