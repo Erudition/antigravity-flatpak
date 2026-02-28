@@ -6,8 +6,16 @@ on:
   workflow_dispatch:      # Allow manual trigger
   push:
     branches: [ main ]
+    paths:
+      - 'com.google.Antigravity.yml'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'com.google.Antigravity.yml'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
 
 permissions:
   contents: write
@@ -47,7 +55,8 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add com.google.Antigravity.yml
-            git commit -m "chore: update Antigravity to version $VERSION"
+            # Use [skip ci] to prevent the push from triggering a redundant concurrent run
+            git commit -m "chore: update Antigravity to version $VERSION [skip ci]"
             git push
             
             echo "updated=true" >> $GITHUB_OUTPUT
@@ -73,6 +82,7 @@ jobs:
       options: --privileged
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      notes: ${{ steps.meta.outputs.notes }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +103,6 @@ jobs:
           VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Run the scraper to get release notes
           NOTES=$(node .github/scripts/extract_changelog.js $VERSION || echo "No official notes found for version $VERSION")
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
