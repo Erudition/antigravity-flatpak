@@ -8,8 +8,9 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
-  # Bypass the broken Flatpak bus symlink logic
+  # Use nosocket to prevent broken symlinks on non-systemd systems (Guix/Alpine/etc)
   - --nosocket=session-bus
+  - --socket=pulseaudio
   - --device=all
   - --filesystem=home
   - --filesystem=/var/run/docker.sock
@@ -20,6 +21,7 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Documents
   - --talk-name=org.freedesktop.portal.Flatpak
   - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.Notifications
   - --env=XDG_CURRENT_DESKTOP=GNOME
   - --env=SSL_CERT_DIR=/etc/ssl/certs
   - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
