@@ -30,6 +30,7 @@ flatpak override --user --filesystem=/gnu/store:ro com.google.Antigravity
 flatpak override --user --filesystem=/var/guix:ro com.google.Antigravity
 flatpak override --user --filesystem=/run/current-system:ro com.google.Antigravity
 flatpak override --user --filesystem=~/.guix-profile:ro com.google.Antigravity
+flatpak override --user --filesystem=xdg-run/shepherd:ro com.google.Antigravity
 
 # 2. Point to the host session bus (Fixes "not a symlink" errors)
 flatpak override --user --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus com.google.Antigravity
