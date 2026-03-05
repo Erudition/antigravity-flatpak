@@ -20,17 +20,23 @@ flatpak remote-add --user --if-not-exists antigravity https://Erudition.github.i
 flatpak install antigravity com.google.Antigravity
 ```
 
-## Features
-*   **Self-Updating:** Automatically tracks and builds the latest stable releases from Google.
-*   **Host Integration:** Includes wrappers for `git`, `node`, `docker`, and `chromium` to seamlessly interact with your host system.
-*   **Agent Optimized:** Pre-configured with `--no-sandbox` to ensure AI agents can correctly spawn and manage processes in specialized environments like Guix.
-
-## Local Overrides (e.g. for Guix)
-If you are running on a Guix system or need specialized filesystem access, you can apply overrides via Flatseal or the command line:
+## Local Overrides (e.g. for Guix / NVIDIA)
+Standard Linux users do not need these. However, if you are running on a **Guix system** or have specialized **NVIDIA** driver paths, apply these overrides to fix DBus and graphics errors:
 
 ```bash
+# 1. Allow access to host drivers and profiles
+flatpak override --user --device=all com.google.Antigravity
 flatpak override --user --filesystem=/gnu/store:ro com.google.Antigravity
+flatpak override --user --filesystem=/var/guix:ro com.google.Antigravity
+flatpak override --user --filesystem=/run/current-system:ro com.google.Antigravity
+flatpak override --user --filesystem=~/.guix-profile:ro com.google.Antigravity
+
+# 2. Point to the host session bus (Fixes "not a symlink" errors)
 flatpak override --user --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus com.google.Antigravity
+
+# 3. Optional: Fix Mesa/GBM pathing if drivers aren't found
+flatpak override --user --env=GBM_BACKENDS_PATH=/run/current-system/profile/lib/gbm com.google.Antigravity
+flatpak override --user --env=__EGL_VENDOR_LIBRARY_DIRS=/run/current-system/profile/share/glvnd/egl_vendor.d com.google.Antigravity
 ```
 
 ## Contributing

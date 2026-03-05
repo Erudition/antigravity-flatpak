@@ -8,9 +8,9 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
-  - --socket=session-bus
-  - --socket=system-bus
-  - --device=dri
+  # Bypass the broken Flatpak bus symlink logic
+  - --nosocket=session-bus
+  - --device=all
   - --filesystem=home
   - --filesystem=/var/run/docker.sock
   - --filesystem=xdg-run/keyring
@@ -99,8 +99,6 @@ modules:
       - |
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
-        # --no-sandbox is included by default as it is required for unpatched Electron 
-        # binaries in most containerized/Guix environments.
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
         EOF
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
