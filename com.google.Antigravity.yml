@@ -4,33 +4,54 @@ runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 command: antigravity
 finish-args:
+  # Basic network and IPC access for the IDE and its agent
   - --share=network
   - --share=ipc
+  # Standard display sockets for X11 and Wayland
   - --socket=x11
   - --socket=wayland
+  # Bypass Flatpak's default session-bus symlink logic which is broken on non-systemd hosts (Guix/Alpine).
+  # We handle the bus connection manually in the startup script.
   - --nosocket=session-bus
+  # Required for hardware/power status discovery and some system-level integrations
   - --socket=system-bus
+  # Essential for PipeWire/PulseAudio support to prevent wireplumber CPU spikes
   - --socket=pulseaudio
+  # Required for full GPU acceleration, particularly for NVIDIA proprietary drivers
   - --device=all
+  # Access to user files.
   - --filesystem=home
+  # Allow the agent to interact with the host's Docker daemon
   - --filesystem=/var/run/docker.sock
+  # Desktop integration for secrets management and GPG signing
   - --filesystem=xdg-run/keyring
   - --filesystem=xdg-run/gnupg
+  # Permission to send desktop alerts
+  - --talk-name=org.freedesktop.Notifications
+  # Permission to access the secrets portal
   - --talk-name=org.freedesktop.secrets
+  # Access to the desktop portals for file selection, etc.
   - --talk-name=org.freedesktop.portal.Desktop
   - --talk-name=org.freedesktop.portal.Documents
   - --talk-name=org.freedesktop.portal.Flatpak
   - --talk-name=org.freedesktop.Flatpak
-  - --talk-name=org.freedesktop.Notifications
+  # Force GNOME branding for consistent UI behavior
   - --env=XDG_CURRENT_DESKTOP=GNOME
+  # Standard SSL certificate locations for the agent to fetch external data
   - --env=SSL_CERT_DIR=/etc/ssl/certs
   - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-  # Guix-specific filesystem mounts (Harmless on non-Guix systems)
+  
+  ## Guix-specific mounts (Optional/Ignored on standard distros)
+  # Essential: All Guix tools and libraries reside here.
   - --filesystem=/gnu/store:ro
+  # Essential: Profile management and state. Must be read-write for 'guix shell'.
   - --filesystem=/var/guix
+  # Essential: Host system profile (for graphics drivers and system-wide modules).
   - --filesystem=/run/current-system:ro
+  # Essential: Explicitly mount profiles to ensure symlinks resolve correctly inside the sandbox.
   - --filesystem=~/.guix-profile:ro
   - --filesystem=~/.config/guix:ro
+  # Essential: Allow 'herd' and 'shepherd' commands to talk to the existing host process.
   - --filesystem=xdg-run/shepherd:ro
 modules:
   - name: antigravity
@@ -44,6 +65,7 @@ modules:
       - |
         cat << 'EOF' > /app/bin/git
         #!/bin/sh
+        # SSH Agent forwarding for host Git access
         if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
             export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
         fi
@@ -108,23 +130,26 @@ modules:
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
         # Auto-Detection for Guix System
+        # If /gnu/store exists, we apply specialized environment fixes for performance and compatibility.
         if [ -d "/gnu/store" ]; then
-            # Fix DBus (Point to host's user-bus)
+            # DBus Fix: Point directly to the host's user-bus socket.
+            # This bypasses the broken symlink logic in the Flatpak runtime on Guix.
             HOST_UID=$(stat -c '%u' "$HOME")
             export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
             
-            # Fix PATH
+            # PATH Fix: Include Guix profile bins so LSP and build tools work natively.
             export PATH="$PATH:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin"
             
-            # Fix Guile Load Paths (LSP support)
+            # Guile Load Path Fix: Required for Scheme LSP support when editing Guix configs.
             export GUILE_LOAD_PATH="$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH"
             export GUILE_LOAD_COMPILED_PATH="$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH"
             
-            # Fix Graphics Drivers
+            # Graphics Fix: Point to the host's specialized graphics driver paths.
             export GBM_BACKENDS_PATH="/run/current-system/profile/lib/gbm"
             export __EGL_VENDOR_LIBRARY_DIRS="/run/current-system/profile/share/glvnd/egl_vendor.d"
         fi
         
+        # Launch binary with no-sandbox to allow AI agents to manage processes correctly.
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
         EOF
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
