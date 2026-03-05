@@ -9,11 +9,10 @@ finish-args:
   - --socket=x11
   - --socket=wayland
   - --socket=session-bus
+  - --socket=system-bus
   - --device=dri
   - --filesystem=home
   - --filesystem=/var/run/docker.sock
-  - --filesystem=/etc/ssl:ro
-  - --filesystem=/etc/pki:ro
   - --filesystem=xdg-run/keyring
   - --filesystem=xdg-run/gnupg
   - --talk-name=org.freedesktop.secrets
