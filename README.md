@@ -20,36 +20,11 @@ flatpak remote-add --user --if-not-exists antigravity https://Erudition.github.i
 flatpak install antigravity com.google.Antigravity
 ```
 
-## Local Overrides (e.g. for Guix / NVIDIA)
-Standard Linux users do not need these. However, if you are running on a **Guix system** or have specialized **NVIDIA** driver paths, apply these overrides to fix DBus, graphics, and Guix module access:
-
-```bash
-# 1. Allow access to host drivers, profiles, and configuration
-flatpak override --user --device=all com.google.Antigravity
-flatpak override --user --filesystem=/gnu/store:ro com.google.Antigravity
-flatpak override --user --filesystem=/var/guix com.google.Antigravity
-flatpak override --user --filesystem=/run/current-system:ro com.google.Antigravity
-flatpak override --user --filesystem=xdg-config/guix:ro com.google.Antigravity
-flatpak override --user --filesystem=~/.guix-profile:ro com.google.Antigravity
-flatpak override --user --filesystem=xdg-run/shepherd:ro com.google.Antigravity
-
-# 2. Add Guix and your profile to the PATH
-flatpak override --user --env=PATH="/app/bin:/usr/bin:/usr/local/bin:~/.config/guix/current/bin:~/.guix-profile/bin" com.google.Antigravity
-
-# 3. Setup Guile Load Paths (for Scheme LSP support)
-flatpak override --user \
-  --env=GUILE_LOAD_PATH="~/.config/guix/current/share/guile/site/3.0:~/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0" \
-  --env=GUILE_LOAD_COMPILED_PATH="~/.config/guix/current/lib/guile/3.0/site-ccache:~/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache" \
-  com.google.Antigravity
-
-# 4. Point to the host session bus (Fixes "not a symlink" errors)
-# Note: replace 1000 with your actual UID if different
-flatpak override --user --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus com.google.Antigravity
-
-# 5. Optional: Fix Mesa/GBM pathing if drivers aren't found
-flatpak override --user --env=GBM_BACKENDS_PATH=/run/current-system/profile/lib/gbm com.google.Antigravity
-flatpak override --user --env=__EGL_VENDOR_LIBRARY_DIRS=/run/current-system/profile/share/glvnd/egl_vendor.d com.google.Antigravity
-```
+## Features
+*   **Self-Updating:** Automatically tracks and builds the latest stable releases from Google.
+*   **Host Integration:** Includes wrappers for `git`, `node`, `docker`, and `chromium` to seamlessly interact with your host system.
+*   **Guix Native Support:** Automatically detects a Guix host and configures the environment (LSP paths, DBus, and graphics drivers) for a seamless experience without manual overrides.
+*   **Agent Optimized:** Pre-configured with `--no-sandbox` to ensure AI agents can correctly spawn and manage processes.
 
 ## Contributing
 New releases are detected automatically every 6 hours. If you wish to propose changes to the Flatpak manifest, please open a Pull Request against the `latest` branch.

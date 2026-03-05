@@ -8,8 +8,8 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
-  # Use nosocket to prevent broken symlinks on non-systemd systems (Guix/Alpine/etc)
   - --nosocket=session-bus
+  - --socket=system-bus
   - --socket=pulseaudio
   - --device=all
   - --filesystem=home
@@ -25,7 +25,13 @@ finish-args:
   - --env=XDG_CURRENT_DESKTOP=GNOME
   - --env=SSL_CERT_DIR=/etc/ssl/certs
   - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-  - --env=PATH=/app/bin:/usr/bin:/usr/local/bin
+  # Guix-specific filesystem mounts (Harmless on non-Guix systems)
+  - --filesystem=/gnu/store:ro
+  - --filesystem=/var/guix
+  - --filesystem=/run/current-system:ro
+  - --filesystem=~/.guix-profile:ro
+  - --filesystem=~/.config/guix:ro
+  - --filesystem=xdg-run/shepherd:ro
 modules:
   - name: antigravity
     buildsystem: simple
@@ -101,6 +107,24 @@ modules:
       - |
         cat << 'EOF' > /app/bin/antigravity
         #!/bin/sh
+        # Auto-Detection for Guix System
+        if [ -d "/gnu/store" ]; then
+            # Fix DBus (Point to host's user-bus)
+            HOST_UID=$(stat -c '%u' "$HOME")
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
+            
+            # Fix PATH
+            export PATH="$PATH:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin"
+            
+            # Fix Guile Load Paths (LSP support)
+            export GUILE_LOAD_PATH="$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH"
+            export GUILE_LOAD_COMPILED_PATH="$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH"
+            
+            # Fix Graphics Drivers
+            export GBM_BACKENDS_PATH="/run/current-system/profile/lib/gbm"
+            export __EGL_VENDOR_LIBRARY_DIRS="/run/current-system/profile/share/glvnd/egl_vendor.d"
+        fi
+        
         exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
         EOF
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
