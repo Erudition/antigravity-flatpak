@@ -29,22 +29,22 @@ flatpak override --user --device=all com.google.Antigravity
 flatpak override --user --filesystem=/gnu/store:ro com.google.Antigravity
 flatpak override --user --filesystem=/var/guix com.google.Antigravity
 flatpak override --user --filesystem=/run/current-system:ro com.google.Antigravity
+flatpak override --user --filesystem=xdg-config/guix:ro com.google.Antigravity
 flatpak override --user --filesystem=~/.guix-profile:ro com.google.Antigravity
-flatpak override --user --filesystem=~/.config/guix:ro com.google.Antigravity
 flatpak override --user --filesystem=xdg-run/shepherd:ro com.google.Antigravity
 
 # 2. Add Guix and your profile to the PATH
-flatpak override --user --env=PATH="/app/bin:/usr/bin:/usr/local/bin:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin" com.google.Antigravity
+flatpak override --user --env=PATH="/app/bin:/usr/bin:/usr/local/bin:~/.config/guix/current/bin:~/.guix-profile/bin" com.google.Antigravity
 
 # 3. Setup Guile Load Paths (for Scheme LSP support)
 flatpak override --user \
-  --env=GUILE_LOAD_PATH="$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0" \
-  --env=GUILE_LOAD_COMPILED_PATH="$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache" \
+  --env=GUILE_LOAD_PATH="~/.config/guix/current/share/guile/site/3.0:~/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0" \
+  --env=GUILE_LOAD_COMPILED_PATH="~/.config/guix/current/lib/guile/3.0/site-ccache:~/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache" \
   com.google.Antigravity
 
 # 4. Point to the host session bus (Fixes "not a symlink" errors)
-# Replace '1000' with your actual UID if different (check via 'id -u')
-flatpak override --user --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus com.google.Antigravity
+# Note: replace 1000 with your actual UID if different
+flatpak override --user --env=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus com.google.Antigravity
 
 # 5. Optional: Fix Mesa/GBM pathing if drivers aren't found
 flatpak override --user --env=GBM_BACKENDS_PATH=/run/current-system/profile/lib/gbm com.google.Antigravity
