@@ -69,61 +69,62 @@ modules:
         if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
             export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
         fi
-        exec flatpak-spawn --host git "$@"
+        # Execute in host login shell to ensure Guix/Native environment is resolved
+        exec flatpak-spawn --host bash -l -c 'exec git "$@"' bash "$@"
         EOF
         chmod +x /app/bin/git
       - |
         cat << 'EOF' > /app/bin/chromium
         #!/bin/sh
-        exec flatpak-spawn --host chromium "$@"
+        exec flatpak-spawn --host bash -l -c 'exec chromium "$@"' bash "$@"
         EOF
         chmod +x /app/bin/chromium
       - |
         cat << 'EOF' > /app/bin/node
         #!/bin/sh
-        exec flatpak-spawn --host node "$@"
+        exec flatpak-spawn --host bash -l -c 'exec node "$@"' bash "$@"
         EOF
         chmod +x /app/bin/node
       - |
         cat << 'EOF' > /app/bin/npx
         #!/bin/sh
-        exec flatpak-spawn --host npx "$@"
+        exec flatpak-spawn --host bash -l -c 'exec npx "$@"' bash "$@"
         EOF
         chmod +x /app/bin/npx
       - |
         cat << 'EOF' > /app/bin/pnpm
         #!/bin/sh
-        exec flatpak-spawn --host pnpm "$@"
+        exec flatpak-spawn --host bash -l -c 'exec pnpm "$@"' bash "$@"
         EOF
         chmod +x /app/bin/pnpm
       - |
         cat << 'EOF' > /app/bin/pnpx
         #!/bin/sh
-        exec flatpak-spawn --host pnpx "$@"
+        exec flatpak-spawn --host bash -l -c 'exec pnpx "$@"' bash "$@"
         EOF
         chmod +x /app/bin/pnpx
       - |
         cat << 'EOF' > /app/bin/wmill
         #!/bin/sh
-        exec flatpak-spawn --host wmill "$@"
+        exec flatpak-spawn --host bash -l -c 'exec wmill "$@"' bash "$@"
         EOF
         chmod +x /app/bin/wmill
       - |
         cat << 'EOF' > /app/bin/host-spawn
         #!/bin/sh
-        exec flatpak-spawn --host "$@"
+        exec flatpak-spawn --host bash -l -c 'exec "$@"' bash "$@"
         EOF
         chmod +x /app/bin/host-spawn
       - |
         cat << 'EOF' > /app/bin/docker
         #!/bin/sh
-        exec flatpak-spawn --host docker "$@"
+        exec flatpak-spawn --host bash -l -c 'exec docker "$@"' bash "$@"
         EOF
         chmod +x /app/bin/docker
       - |
         cat << 'EOF' > /app/bin/docker-compose
         #!/bin/sh
-        exec flatpak-spawn --host docker-compose "$@"
+        exec flatpak-spawn --host bash -l -c 'exec docker-compose "$@"' bash "$@"
         EOF
         chmod +x /app/bin/docker-compose
       - |
