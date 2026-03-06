@@ -68,62 +68,62 @@ modules:
         if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
             export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
         fi
-        # Complex wrapper to ensure: 1. Login shell, 2. Alias expansion, 3. .bashrc loaded, 4. exec for process management
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec git "$@"' bash "$@"
+        # Use a function-aware wrapper to support host-defined functions and aliases
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec git "$@"' bash "$@"
         EOF
         chmod +x /app/bin/git
       - |
         cat << 'EOF' > /app/bin/chromium
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec chromium "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec chromium "$@"' bash "$@"
         EOF
         chmod +x /app/bin/chromium
       - |
         cat << 'EOF' > /app/bin/node
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec node "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec node "$@"' bash "$@"
         EOF
         chmod +x /app/bin/node
       - |
         cat << 'EOF' > /app/bin/npx
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec npx "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec npx "$@"' bash "$@"
         EOF
         chmod +x /app/bin/npx
       - |
         cat << 'EOF' > /app/bin/pnpm
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec pnpm "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec pnpm "$@"' bash "$@"
         EOF
         chmod +x /app/bin/pnpm
       - |
         cat << 'EOF' > /app/bin/pnpx
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec pnpx "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec pnpx "$@"' bash "$@"
         EOF
         chmod +x /app/bin/pnpx
       - |
         cat << 'EOF' > /app/bin/wmill
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec wmill "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec wmill "$@"' bash "$@"
         EOF
         chmod +x /app/bin/wmill
       - |
         cat << 'EOF' > /app/bin/host-spawn
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$@"
         EOF
         chmod +x /app/bin/host-spawn
       - |
         cat << 'EOF' > /app/bin/docker
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec docker "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec docker "$@"' bash "$@"
         EOF
         chmod +x /app/bin/docker
       - |
         cat << 'EOF' > /app/bin/docker-compose
         #!/bin/sh
-        exec flatpak-spawn --host bash -l -c 'shopt -s expand_aliases; [ -f ~/.bashrc ] && . ~/.bashrc; exec docker-compose "$@"' bash "$@"
+        exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec docker-compose "$@"' bash "$@"
         EOF
         chmod +x /app/bin/docker-compose
       - |
