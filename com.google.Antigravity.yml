@@ -40,7 +40,6 @@ finish-args:
   # Standard SSL certificate locations for the agent to fetch external data
   - --env=SSL_CERT_DIR=/etc/ssl/certs
   - --env=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-  
   ## Guix-specific mounts (Optional/Ignored on standard distros)
   # Essential: All Guix tools and libraries reside here.
   - --filesystem=/gnu/store:ro
@@ -126,32 +125,7 @@ modules:
         exec flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec docker-compose "$@"' bash "$@"
         EOF
         chmod +x /app/bin/docker-compose
-      - |
-        cat << 'EOF' > /app/bin/antigravity
-        #!/bin/sh
-        # Auto-Detection for Guix System
-        # If /gnu/store exists, we apply specialized environment fixes for performance and compatibility.
-        if [ -d "/gnu/store" ]; then
-            # DBus Fix: Point directly to the host's user-bus socket.
-            # This bypasses the broken symlink logic in the Flatpak runtime on Guix.
-            HOST_UID=$(stat -c '%u' "$HOME")
-            export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
-            
-            # PATH Fix: Include Guix profile bins so LSP and build tools work natively.
-            export PATH="$PATH:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin"
-            
-            # Guile Load Path Fix: Required for Scheme LSP support when editing Guix configs.
-            export GUILE_LOAD_PATH="$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH"
-            export GUILE_LOAD_COMPILED_PATH="$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH"
-            
-            # Graphics Fix: Point to the host's specialized graphics driver paths.
-            export GBM_BACKENDS_PATH="/run/current-system/profile/lib/gbm"
-            export __EGL_VENDOR_LIBRARY_DIRS="/run/current-system/profile/share/glvnd/egl_vendor.d"
-        fi
-        
-        # Launch binary with no-sandbox to allow AI agents to manage processes correctly.
-        exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
-        EOF
+      - "cat << 'EOF' > /app/bin/antigravity\n#!/bin/sh\n# Auto-Detection for Guix System\n# If /gnu/store exists, we apply specialized environment fixes for performance and compatibility.\nif [ -d \"/gnu/store\" ]; then\n    # DBus Fix: Point directly to the host's user-bus socket.\n    # This bypasses the broken symlink logic in the Flatpak runtime on Guix.\n    HOST_UID=$(stat -c '%u' \"$HOME\")\n    export DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$HOST_UID/bus\"\n    \n    # PATH Fix: Include Guix profile bins so LSP and build tools work natively.\n    export PATH=\"$PATH:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin\"\n    \n    # Guile Load Path Fix: Required for Scheme LSP support when editing Guix configs.\n    export GUILE_LOAD_PATH=\"$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH\"\n    export GUILE_LOAD_COMPILED_PATH=\"$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH\"\n    \n    # Graphics Fix: Point to the host's specialized graphics driver paths.\n    export GBM_BACKENDS_PATH=\"/run/current-system/profile/lib/gbm\"\n    export __EGL_VENDOR_LIBRARY_DIRS=\"/run/current-system/profile/share/glvnd/egl_vendor.d\"\nfi\n\n# Launch binary with no-sandbox to allow AI agents to manage processes correctly.\nexec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox \"$@\"\nEOF\n"
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
       - |
         cat << 'EOF' > /app/share/applications/com.google.Antigravity.desktop
@@ -168,8 +142,8 @@ modules:
       - cp resources/app/out/vs/platform/browserOnboarding/static/antigravity.svg /app/share/icons/hicolor/scalable/apps/com.google.Antigravity.svg
     sources:
       - type: archive
-        url: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.19.6-6514342219874304/linux-x64/Antigravity.tar.gz
-        sha256: 80522c9d60bcc04bb13d40fa136601d184dc83f36bb9065eb29cc456db4c29e1
+        url: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.20.5-5474622945755136/linux-x64/Antigravity.tar.gz
+        sha256: 5b87664f454da487b8dee87aaf5e3361d9ba79b947770b798bd0fa874a9827e5
         strip-components: 1
       - type: file
         path: com.google.Antigravity.metainfo.xml
