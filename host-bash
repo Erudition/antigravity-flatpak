@@ -11,14 +11,11 @@ if [[ "$1" == "-c" ]]; then
     CMD="$2"
     shift 2
 
-    # AGENT MODE: Non-interactive, machine-readable output
-    export STARSHIP_DISABLE=true
-    export STARSHIP_CONFIG=/dev/null
-    export TERM=dumb
-    export PAGER=cat
-    export MANPAGER=cat
-
-    exec /app/bin/host-spawn bash -l -c "$CMD"
+    # AGENT MODE: Non-interactive, machine-readable output.
+    # Set env vars via host-spawn env so they exist BEFORE bash sources .bash_profile.
+    # STARSHIP_CONFIG=/dev/null prevents starship from initializing.
+    # PAGER/MANPAGER=cat prevents git/man from launching interactive pagers.
+    exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null PAGER=cat MANPAGER=cat bash -l -c "$CMD"
 else
     # INTERACTIVE MODE: Full TTY for the user
     export TERM=xterm-256color

@@ -18,7 +18,6 @@ for arg in "$@"; do
     ARGS="$ARGS $(printf '%q' "$arg")"
 done
 
+# Use env to set STARSHIP_CONFIG before bash starts (so starship sees it during init).
 # Use -ic (interactive) so bash expands aliases from .bashrc (e.g. pnpm -> corepack pnpm).
-# STARSHIP_CONFIG=/dev/null prevents starship from initializing in this non-terminal context.
-export STARSHIP_CONFIG=/dev/null
-exec /app/bin/host-spawn bash -ic "$CMD$ARGS"
+exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null bash -ic "$CMD$ARGS"
