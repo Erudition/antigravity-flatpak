@@ -30,13 +30,14 @@ if [[ "$1" == "-c" ]]; then
     # Trap termination signals to explicitly clean up host-side background processes.
     trap '
         if [ -s "$PID_FILE" ]; then
-            HOST_PID=$(cat "$PID_FILE")
-            # Signal bridging across the portal
-            /usr/bin/flatpak-spawn --host kill $HOST_PID 2>/dev/null
+            # 1. Signal bridging across the portal (Direct host-side kill)
+            /usr/bin/flatpak-spawn --host kill $(cat "$PID_FILE") 2>/dev/null
         fi
-        kill $SPAWN_PID 2>/dev/null
+        # 2. Kill the local flatpak-spawn proxy with extreme prejudice to prevent IDE hanging
+        kill -9 $SPAWN_PID 2>/dev/null
+        # 3. Final cleanup and immediate exit
         rm -f "$PID_FILE"
-        exit
+        exit 0
     ' SIGTERM SIGINT EXIT
 
     wait $SPAWN_PID
