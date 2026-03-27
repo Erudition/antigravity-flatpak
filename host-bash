@@ -1,39 +1,26 @@
 #!/usr/bin/env bash
 # Antigravity Host-Integrated Bash Wrapper (Host-Spawn Edition)
-# Supporting robust TTY management and shell integration markers.
+# Provides robust PTY and signal management across the Flatpak portal.
 
 if [ -d "/gnu/store" ]; then
-    HOST_USER=$(stat -c '%U' "$HOME")
+    HOST_USER=$(id -un)
     export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
 fi
 
-# Shell Integration Start Marker (Signals to the IDE that a command has begun)
-# This unblocks the IDE's status-watcher and enables success/fail decoration.
 if [[ "$1" == "-c" ]]; then
     CMD="$2"
     shift 2
 
-    # AGENT MODE: Non-interactive and machine-friendly
+    # AGENT MODE: Non-interactive, machine-readable output
     export STARSHIP_DISABLE=true
-    export STARSHIP_CONFIG=/dev/null # Suppress initialization warnings
+    export STARSHIP_CONFIG=/dev/null
     export TERM=dumb
     export PAGER=cat
     export MANPAGER=cat
-    
-    # Inject start marker
-    printf "\e]633;A\e\\" >&2
-    
-    /app/bin/host-spawn bash -l -c "$CMD"
-    RET=$?
-    
-    # Inject finish marker with exit code
-    printf "\e]633;D;$RET\e\\" >&2
-    exit $RET
+
+    exec /app/bin/host-spawn bash -l -c "$CMD"
 else
-    # INTERACTIVE MODE: User-facing with colors and prompt
+    # INTERACTIVE MODE: Full TTY for the user
     export TERM=xterm-256color
-    
-    # We don't inject markers here because the user's shell integration 
-    # (if sourced in .bashrc) will handle its own interactive prompt markers.
     exec /app/bin/host-spawn bash -l "$@"
 fi

@@ -64,21 +64,8 @@ modules:
       - cp com.google.Antigravity.metainfo.xml /app/share/metainfo/com.google.Antigravity.metainfo.xml
       - cp host-bash /app/bin/host-bash
       - chmod +x /app/bin/host-bash
-      - |
-        cat << 'EOF' > /app/bin/antigravity-host-exec
-        #!/bin/sh
-        # Centralized Host-Switch Helper for Antigravity Tool Wrappers
-        # Resolves its own name (via symlink) to the host-side command.
-        if [ -d "/gnu/store" ]; then
-            HOST_UID=$(stat -c '%u' "$HOME")
-            HOST_USER=$(stat -c '%U' "$HOME")
-            export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
-            export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
-        fi
-        CMD=$(basename "$0")
-        exec /app/bin/host-spawn bash -l -c "[ -f ~/.bashrc ] && . ~/.bashrc; exec $CMD \"\$@\"" bash "$@"
-        EOF
-        chmod +x /app/bin/antigravity-host-exec
+      - cp antigravity-host-exec /app/bin/antigravity-host-exec
+      - chmod +x /app/bin/antigravity-host-exec
       - ln -sf antigravity-host-exec /app/bin/git
       - ln -sf antigravity-host-exec /app/bin/chromium
       - ln -sf antigravity-host-exec /app/bin/node
@@ -112,6 +99,8 @@ modules:
         path: com.google.Antigravity.metainfo.xml
       - type: file
         path: host-bash
+      - type: file
+        path: antigravity-host-exec
   - name: host-spawn
     buildsystem: simple
     build-commands:

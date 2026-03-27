@@ -1,0 +1,14 @@
+#!/bin/sh
+# Centralized Host-Switch Helper for Antigravity Tool Wrappers
+# Resolves its own name (via symlink basename) to the host-side command.
+# Installed as symlinks: git -> antigravity-host-exec, pnpm -> antigravity-host-exec, etc.
+
+if [ -d "/gnu/store" ]; then
+    HOST_UID=$(stat -c '%u' "$HOME")
+    HOST_USER=$(id -un)
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
+    export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
+fi
+
+CMD=$(basename "$0")
+exec /app/bin/host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$CMD" "$@"
