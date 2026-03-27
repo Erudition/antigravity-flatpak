@@ -18,9 +18,9 @@ finish-args:
   - --socket=system-bus
   # Essential for PipeWire/PulseAudio support to prevent wireplumber CPU spikes
   - --socket=pulseaudio
-  # Required for full GPU acceleration, particularly for NVIDIA proprietary drivers
+  # Required for full GPU acceleration, particularly for NVIDIA
   - --device=all
-  # Access to user files.
+  # Access to user files, since this is an IDE
   - --filesystem=home
   # Allow the agent to interact with the host's Docker daemon
   - --filesystem=/var/run/docker.sock
@@ -152,3 +152,12 @@ modules:
         path: com.google.Antigravity.metainfo.xml
       - type: file
         path: host-bash
+  - name: host-spawn
+    buildsystem: simple
+    build-commands:
+      - gcc -O2 host-spawn.c -o host-spawn
+      - install -D host-spawn /app/bin/host-spawn
+    sources:
+      - type: git
+        url: https://github.com/131/host-spawn.git
+        tag: v1.6.2

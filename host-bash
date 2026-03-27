@@ -1,48 +1,19 @@
 #!/usr/bin/env bash
-# Antigravity Host-Integrated Bash Wrapper (Flatpak)
-# Distro-agnostic solution for reliable process termination and host tool access.
+# Antigravity Host-Integrated Bash Wrapper (Host-Spawn Edition)
+# Using host-spawn for robust signal propagation and PTY management.
 
-# 1. Distro-Specific Path Injection (Guix-Friendly)
-# Handles systems where host binaries are in non-standard paths (e.g., /gnu/store).
 if [ -d "/gnu/store" ]; then
-    # Note: Using $USER instead of hardcoded 'adroit' for general portability.
     HOST_USER=$(stat -c '%U' "$HOME")
     export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
 fi
 
-# 2. Command Execution via PID-Bridge (Distro-Agnostic)
-# Ensures termination signals reach the host process by bridging the 'Portal Wall'.
+# We use host-spawn which handles PTY allocation and signals better than flatpak-spawn.
+# Note: we use 'exec' to hand over control to host-spawn immediately.
 if [[ "$1" == "-c" ]]; then
     CMD="$2"
     shift 2
-
-    # PID Management and shared storage
-    PID_DIR="$HOME/.cache/antigravity/pids"
-    mkdir -p "$PID_DIR"
-    TOKEN=$(mktemp -u XXXXXXXX)
-    PID_FILE="$PID_DIR/$TOKEN"
-
-    # Launch host process and capture its PID via a temporary token file.
-    /usr/bin/flatpak-spawn --host --env="TERM=xterm-256color" \
-        bash -l -c "echo \$\$ > '$PID_FILE'; exec bash -c \"\$1\"" -- "$CMD" &
-    SPAWN_PID=$!
-
-    # Trap termination signals to explicitly clean up host-side background processes.
-    trap '
-        if [ -s "$PID_FILE" ]; then
-            # 1. Signal bridging across the portal (Direct host-side kill)
-            /usr/bin/flatpak-spawn --host kill $(cat "$PID_FILE") 2>/dev/null
-        fi
-        # 2. Kill the local flatpak-spawn proxy with extreme prejudice to prevent IDE hanging
-        kill -9 $SPAWN_PID 2>/dev/null
-        # 3. Final cleanup and immediate exit
-        rm -f "$PID_FILE"
-        exit 0
-    ' SIGTERM SIGINT EXIT
-
-    wait $SPAWN_PID
-    exit $?
+    exec /app/bin/host-spawn bash -l -c "$CMD"
 else
-    # 3. Interactive/Direct Mode
-    exec /usr/bin/flatpak-spawn --host --env="TERM=xterm-256color" bash -l "$@"
+    # Interactive mode
+    exec /app/bin/host-spawn bash -l "$@"
 fi
