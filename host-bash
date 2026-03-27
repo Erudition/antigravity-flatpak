@@ -15,6 +15,7 @@ if [[ "$1" == "-c" ]]; then
 
     # AGENT MODE: Non-interactive and machine-friendly
     export STARSHIP_DISABLE=true
+    export STARSHIP_CONFIG=/dev/null # Suppress initialization warnings
     export TERM=dumb
     export PAGER=cat
     export MANPAGER=cat
