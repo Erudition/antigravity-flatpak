@@ -68,13 +68,15 @@ modules:
         cat << 'EOF' > /app/bin/antigravity-host-exec
         #!/bin/sh
         # Centralized Host-Switch Helper for Antigravity Tool Wrappers
+        # Resolves its own name (via symlink) to the host-side command.
         if [ -d "/gnu/store" ]; then
             HOST_UID=$(stat -c '%u' "$HOME")
             HOST_USER=$(stat -c '%U' "$HOME")
             export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
             export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
         fi
-        exec /app/bin/host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$@"
+        CMD=$(basename "$0")
+        exec /app/bin/host-spawn bash -l -c "[ -f ~/.bashrc ] && . ~/.bashrc; exec $CMD \"\$@\"" bash "$@"
         EOF
         chmod +x /app/bin/antigravity-host-exec
       - ln -sf antigravity-host-exec /app/bin/git
