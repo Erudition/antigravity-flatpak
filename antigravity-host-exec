@@ -11,4 +11,14 @@ if [ -d "/gnu/store" ]; then
 fi
 
 CMD=$(basename "$0")
-exec /app/bin/host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$CMD" "$@"
+
+# Build a properly quoted argument string for the host-side bash.
+ARGS=""
+for arg in "$@"; do
+    ARGS="$ARGS $(printf '%q' "$arg")"
+done
+
+# Use -ic (interactive) so bash expands aliases from .bashrc (e.g. pnpm -> corepack pnpm).
+# STARSHIP_CONFIG=/dev/null prevents starship from initializing in this non-terminal context.
+export STARSHIP_CONFIG=/dev/null
+exec /app/bin/host-spawn bash -ic "$CMD$ARGS"
