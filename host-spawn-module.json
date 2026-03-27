@@ -1,0 +1,15 @@
+{
+    "name": "host-spawn",
+    "buildsystem": "simple",
+    "build-commands": [
+        "gcc -O2 host-spawn.c -o host-spawn",
+        "install -D host-spawn /app/bin/host-spawn"
+    ],
+    "sources": [
+        {
+            "type": "git",
+            "url": "https://github.com/131/host-spawn.git",
+            "tag": "v1.6.0"
+        }
+    ]
+}

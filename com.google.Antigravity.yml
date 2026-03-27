@@ -155,9 +155,8 @@ modules:
   - name: host-spawn
     buildsystem: simple
     build-commands:
-      - gcc -O2 host-spawn.c -o host-spawn
-      - install -D host-spawn /app/bin/host-spawn
+      - install -D host-spawn-x86_64 /app/bin/host-spawn
     sources:
-      - type: git
-        url: https://github.com/131/host-spawn.git
-        tag: v1.6.2
+      - type: file
+        url: https://github.com/1player/host-spawn/releases/download/v1.6.2/host-spawn-x86_64
+        sha256: 077bc09a087292447ba17cfe2156a93f71bf56c4c6be8e38d3abe65c1240f34c
