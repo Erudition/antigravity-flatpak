@@ -65,69 +65,27 @@ modules:
       - cp host-bash /app/bin/host-bash
       - chmod +x /app/bin/host-bash
       - |
-        cat << 'EOF' > /app/bin/git
+        cat << 'EOF' > /app/bin/antigravity-host-exec
         #!/bin/sh
-        if [ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]; then
-            export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
+        # Centralized Host-Switch Helper for Antigravity Tool Wrappers
+        if [ -d "/gnu/store" ]; then
+            HOST_UID=$(stat -c '%u' "$HOME")
+            HOST_USER=$(stat -c '%U' "$HOME")
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
+            export PATH="/home/$HOST_USER/.guix-home/profile/bin:/home/$HOST_USER/.config/guix/current/bin:/home/$HOST_USER/.guix-profile/bin:/run/current-system/profile/bin:$PATH"
         fi
-        # Use host-spawn for robust signal management (e.g., for commit -v/nano)
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec git "$@"' bash "$@"
+        exec /app/bin/host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$@"
         EOF
-        chmod +x /app/bin/git
-      - |
-        cat << 'EOF' > /app/bin/chromium
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec chromium "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/chromium
-      - |
-        cat << 'EOF' > /app/bin/node
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec node "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/node
-      - |
-        cat << 'EOF' > /app/bin/npx
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec npx "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/npx
-      - |
-        cat << 'EOF' > /app/bin/pnpm
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec pnpm "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/pnpm
-      - |
-        cat << 'EOF' > /app/bin/pnpx
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec pnpx "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/pnpx
-      - |
-        cat << 'EOF' > /app/bin/wmill
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec wmill "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/wmill
-      - |
-        cat << 'EOF' > /app/bin/host-spawn
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/host-spawn
-      - |
-        cat << 'EOF' > /app/bin/docker
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec docker "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/docker
-      - |
-        cat << 'EOF' > /app/bin/docker-compose
-        #!/bin/sh
-        exec host-spawn bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec docker-compose "$@"' bash "$@"
-        EOF
-        chmod +x /app/bin/docker-compose
+        chmod +x /app/bin/antigravity-host-exec
+      - ln -sf antigravity-host-exec /app/bin/git
+      - ln -sf antigravity-host-exec /app/bin/chromium
+      - ln -sf antigravity-host-exec /app/bin/node
+      - ln -sf antigravity-host-exec /app/bin/npx
+      - ln -sf antigravity-host-exec /app/bin/pnpm
+      - ln -sf antigravity-host-exec /app/bin/pnpx
+      - ln -sf antigravity-host-exec /app/bin/wmill
+      - ln -sf antigravity-host-exec /app/bin/docker
+      - ln -sf antigravity-host-exec /app/bin/docker-compose
       - "cat << 'EOF' > /app/bin/antigravity\n#!/bin/sh\n# Auto-Detection for Guix System\n# If /gnu/store exists, we apply specialized environment fixes for performance and compatibility.\nif [ -d \"/gnu/store\" ]; then\n    # DBus Fix: Point directly to the host's user-bus socket.\n    # This bypasses the broken symlink logic in the Flatpak runtime on Guix.\n    HOST_UID=$(stat -c '%u' \"$HOME\")\n    export DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$HOST_UID/bus\"\n    \n    # PATH Fix: Include Guix profile bins so LSP and build tools work natively.\n    export PATH=\"$PATH:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin\"\n    \n    # Guile Load Path Fix: Required for Scheme LSP support when editing Guix configs.\n    export GUILE_LOAD_PATH=\"$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH\"\n    export GUILE_LOAD_COMPILED_PATH=\"$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH\"\n    \n    # Graphics Fix: Point to the host's specialized graphics driver paths.\n    export GBM_BACKENDS_PATH=\"/run/current-system/profile/lib/gbm\"\n    export __EGL_VENDOR_LIBRARY_DIRS=\"/run/current-system/profile/share/glvnd/egl_vendor.d\"\nfi\n\n# Launch binary with no-sandbox to allow AI agents to manage processes correctly.\nexec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox \"$@\"\nEOF\n"
       - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
       - |
