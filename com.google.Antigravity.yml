@@ -61,6 +61,8 @@ modules:
       - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/app/out/vs/platform/browserOnboarding/static/browserOnboarding.html
       - cp -r . /app/lib/antigravity/
       - cp com.google.Antigravity.metainfo.xml /app/share/metainfo/com.google.Antigravity.metainfo.xml
+      - cp host-bash /app/bin/host-bash
+      - chmod +x /app/bin/host-bash
       - |
         cat << 'EOF' > /app/bin/git
         #!/bin/sh
@@ -147,3 +149,5 @@ modules:
         strip-components: 1
       - type: file
         path: com.google.Antigravity.metainfo.xml
+      - type: file
+        path: host-bash
