@@ -36,9 +36,6 @@ jobs:
           # Build into OSTree repository. --disable-rofiles-fuse is critical for CI stability.
           dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml
           
-          # Explicitly remove the deprecated master branch reference if it exists
-          ostree refs --repo=repo --delete refs/heads/master 2>/dev/null || true
-          
           # Generate Static Deltas for faster updates and prune old objects
           flatpak build-update-repo --generate-static-deltas --prune repo
           
