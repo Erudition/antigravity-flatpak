@@ -40,7 +40,7 @@ jobs:
           flatpak build-update-repo --generate-static-deltas --prune repo
           
           # Create standalone bundle
-          flatpak build-bundle repo antigravity.flatpak com.google.Antigravity
+          flatpak build-bundle repo antigravity.flatpak com.google.Antigravity latest
 
       - name: Extract Metadata & Scrape Changelog
         id: meta
@@ -86,7 +86,7 @@ jobs:
           [Flatpak Ref]
           Title=Antigravity
           Name=com.google.Antigravity
-          Branch=master
+          Branch=latest
           Url=${REPO_URL}
           IsRuntime=false
           SuggestRemoteName=antigravity
