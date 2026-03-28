@@ -64,20 +64,8 @@ modules:
       - cp com.google.Antigravity.metainfo.xml /app/share/metainfo/com.google.Antigravity.metainfo.xml
       - cp host-bash /app/bin/host-bash
       - cp antigravity-host-exec /app/bin/antigravity-host-exec
-      - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec
-      - cp antigravity-host-exec /app/bin/antigravity-host-exec
-      - chmod +x /app/bin/antigravity-host-exec
-      - ln -sf antigravity-host-exec /app/bin/git
-      - ln -sf antigravity-host-exec /app/bin/chromium
-      - ln -sf antigravity-host-exec /app/bin/node
-      - ln -sf antigravity-host-exec /app/bin/npx
-      - ln -sf antigravity-host-exec /app/bin/pnpm
-      - ln -sf antigravity-host-exec /app/bin/pnpx
-      - ln -sf antigravity-host-exec /app/bin/wmill
-      - ln -sf antigravity-host-exec /app/bin/docker
-      - ln -sf antigravity-host-exec /app/bin/docker-compose
-      - "cat << 'EOF' > /app/bin/antigravity\n#!/bin/sh\n# Silence starship initialization warnings for non-interactive IDE shells (like agents).\nexport STARSHIP_CONFIG=/dev/null\n\n# Auto-Detection for Guix System\nif [ -d \"/gnu/store\" ]; then\n    HOST_UID=$(stat -c '%u' \"$HOME\")\n    export DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$HOST_UID/bus\"\n    \n    # PATH Fix: Include Guix and Guix Home profile bins.\n    export PATH=\"$PATH:$HOME/.guix-home/profile/bin:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin\"\n    \n    # Guile Load Path Fix\n    export GUILE_LOAD_PATH=\"$HOME/.guix-home/profile/share/guile/site/3.0:$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH\"\n    export GUILE_LOAD_COMPILED_PATH=\"$HOME/.guix-home/profile/lib/guile/3.0/site-ccache:$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH\"\n    \n    # Graphics Fix\n    export GBM_BACKENDS_PATH=\"/run/current-system/profile/lib/gbm\"\n    export __EGL_VENDOR_LIBRARY_DIRS=\"/run/current-system/profile/share/glvnd/egl_vendor.d\"\nfi\n\n# Launch binary\nexec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox \"$@\"\nEOF\n"
-      - chmod +x /app/bin/antigravity /app/lib/antigravity/antigravity
+      - cp antigravity-wrapper /app/bin/antigravity
+      - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec /app/bin/antigravity /app/lib/antigravity/antigravity
       - |
         cat << 'EOF' > /app/share/applications/com.google.Antigravity.desktop
         [Desktop Entry]
@@ -98,6 +86,8 @@ modules:
         strip-components: 1
       - type: file
         path: com.google.Antigravity.metainfo.xml
+      - type: file
+        path: antigravity-wrapper
       - type: file
         path: host-bash
       - type: file
