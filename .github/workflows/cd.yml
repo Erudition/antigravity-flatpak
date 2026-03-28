@@ -5,6 +5,8 @@ on:
     branches: [ latest ]
     paths:
       - 'com.google.Antigravity.yml'
+      - 'host-bash'
+      - 'antigravity-host-exec'
       - '.github/workflows/cd.yml'
       - '.github/scripts/**'
 
