@@ -13,12 +13,11 @@ if [[ "$1" == "-c" ]]; then
 
     # AGENT MODE: Non-interactive, machine-readable output.
     # Set env vars via host-spawn env so they exist BEFORE bash sources .bash_profile.
-    # STARSHIP_CONFIG=/dev/null prevents starship from initializing.
     # PAGER/MANPAGER=cat prevents git/man from launching interactive pagers.
-    exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null PAGER=cat MANPAGER=cat bash -l -c "$CMD"
+    exec /app/bin/host-spawn env PAGER=cat MANPAGER=cat bash -l -c "$CMD"
 else
     # INTERACTIVE MODE: Full TTY for the user
     export TERM=xterm-256color
-    # Unset global silencing and pager overrides so the user's shell is fully interactive.
-    exec /app/bin/host-spawn env STARSHIP_CONFIG='' PAGER='' MANPAGER='' bash -l "$@"
+    # Unset global pager overrides so the user's shell is fully interactive.
+    exec /app/bin/host-spawn env PAGER='' MANPAGER='' bash -l "$@"
 fi

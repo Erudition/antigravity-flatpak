@@ -66,6 +66,15 @@ modules:
       - cp antigravity-host-exec /app/bin/antigravity-host-exec
       - cp antigravity-wrapper /app/bin/antigravity
       - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec /app/bin/antigravity /app/lib/antigravity/antigravity
+      - ln -sf antigravity-host-exec /app/bin/git
+      - ln -sf antigravity-host-exec /app/bin/chromium
+      - ln -sf antigravity-host-exec /app/bin/node
+      - ln -sf antigravity-host-exec /app/bin/npx
+      - ln -sf antigravity-host-exec /app/bin/pnpm
+      - ln -sf antigravity-host-exec /app/bin/pnpx
+      - ln -sf antigravity-host-exec /app/bin/wmill
+      - ln -sf antigravity-host-exec /app/bin/docker
+      - ln -sf antigravity-host-exec /app/bin/docker-compose
       - |
         cat << 'EOF' > /app/share/applications/com.google.Antigravity.desktop
         [Desktop Entry]

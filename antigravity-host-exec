@@ -18,6 +18,11 @@ for arg in "$@"; do
     ARGS="$ARGS $(printf '%q' "$arg")"
 done
 
-# Use env to silence starship and force non-interactive paged output.
-# Use -ic (interactive) so bash expands aliases from .bashrc (e.g. pnpm -> corepack pnpm).
-exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null PAGER=cat MANPAGER=cat bash -ic "$CMD$ARGS"
+# Hardcode corepack for pnpm/pnpx so we don't need interactive aliases to resolve them.
+if [ "$CMD" = "pnpm" ] || [ "$CMD" = "pnpx" ]; then
+    CMD="corepack $CMD"
+fi
+
+# Use env to force non-interactive paged output.
+# Use -c (non-interactive) to prevent sourcing ~/.bashrc for every single tool call.
+exec /app/bin/host-spawn env PAGER=cat MANPAGER=cat bash -c "$CMD$ARGS"

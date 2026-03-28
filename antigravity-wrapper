@@ -2,9 +2,9 @@
 # Google Antigravity Flatpak Entry Point (Hardened Host-Integration)
 # This script is installed as /app/bin/antigravity and manages the IDE environment.
 
-# Silence Starship and force non-interactive paged output.
-# This prevents "[ERROR] - (starship::print)" noise and "git log" hangs.
-export STARSHIP_CONFIG=/dev/null
+# The ANTIGRAVITY_ACTIVE contract is used by the host ~/.bashrc to disable Starship.
+# PAGER/MANPAGER=cat prevents "git log" and other interactive pagers from hanging.
+export ANTIGRAVITY_ACTIVE=1
 export PAGER=cat
 export MANPAGER=cat
 
