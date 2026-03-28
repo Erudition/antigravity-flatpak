@@ -18,6 +18,6 @@ for arg in "$@"; do
     ARGS="$ARGS $(printf '%q' "$arg")"
 done
 
-# Use env to set STARSHIP_CONFIG before bash starts (so starship sees it during init).
+# Use env to silence starship and force non-interactive paged output.
 # Use -ic (interactive) so bash expands aliases from .bashrc (e.g. pnpm -> corepack pnpm).
-exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null bash -ic "$CMD$ARGS"
+exec /app/bin/host-spawn env STARSHIP_CONFIG=/dev/null PAGER=cat MANPAGER=cat bash -ic "$CMD$ARGS"

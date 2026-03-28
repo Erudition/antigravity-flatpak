@@ -19,6 +19,6 @@ if [[ "$1" == "-c" ]]; then
 else
     # INTERACTIVE MODE: Full TTY for the user
     export TERM=xterm-256color
-    # Unset global silencing so the user's shell can use Starship normally.
-    exec /app/bin/host-spawn env STARSHIP_CONFIG= bash -l "$@"
+    # Unset global silencing and pager overrides so the user's shell is fully interactive.
+    exec /app/bin/host-spawn env STARSHIP_CONFIG='' PAGER='' MANPAGER='' bash -l "$@"
 fi

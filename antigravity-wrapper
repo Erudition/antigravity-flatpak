@@ -2,30 +2,28 @@
 # Google Antigravity Flatpak Entry Point (Hardened Host-Integration)
 # This script is installed as /app/bin/antigravity and manages the IDE environment.
 
-# Silence Starship initialization by default for all non-interactive IDE shells (like agents).
-# This prevents the "[ERROR] - (starship::print): Under a 'dumb' terminal" noise.
+# Silence Starship and force non-interactive paged output.
+# This prevents "[ERROR] - (starship::print)" noise and "git log" hangs.
 export STARSHIP_CONFIG=/dev/null
+export PAGER=cat
+export MANPAGER=cat
 
 # Auto-Detection for Guix System
-# If /gnu/store exists, we apply specialized environment fixes for performance and compatibility.
 if [ -d "/gnu/store" ]; then
-    # DBus Fix: Point directly to the host's user-bus socket.
-    # This bypasses the broken symlink logic in the Flatpak runtime on Guix.
     HOST_UID=$(stat -c '%u' "$HOME")
     export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$HOST_UID/bus"
     
-    # PATH Fix: Include Guix and Guix Home profile bins so LSP and build tools work natively.
-    # Prioritizes Guix Home (~/.guix-home/profile/bin) over the global system profile.
+    # PATH Fix: Include Guix and Guix Home profiles.
     export PATH="$PATH:$HOME/.guix-home/profile/bin:$HOME/.config/guix/current/bin:$HOME/.guix-profile/bin"
     
-    # Guile Load Path Fix: Required for Scheme LSP support when editing Guix configs.
+    # Guile Load Path Fix
     export GUILE_LOAD_PATH="$HOME/.guix-home/profile/share/guile/site/3.0:$HOME/.config/guix/current/share/guile/site/3.0:$HOME/.guix-profile/share/guile/site/3.0:/run/current-system/profile/share/guile/site/3.0:$GUILE_LOAD_PATH"
     export GUILE_LOAD_COMPILED_PATH="$HOME/.guix-home/profile/lib/guile/3.0/site-ccache:$HOME/.config/guix/current/lib/guile/3.0/site-ccache:$HOME/.guix-profile/lib/guile/3.0/site-ccache:/run/current-system/profile/lib/guile/3.0/site-ccache:$GUILE_LOAD_COMPILED_PATH"
     
-    # Graphics Fix: Point to the host's specialized graphics driver paths (NVIDIA/AMD).
+    # Graphics Fix
     export GBM_BACKENDS_PATH="/run/current-system/profile/lib/gbm"
     export __EGL_VENDOR_LIBRARY_DIRS="/run/current-system/profile/share/glvnd/egl_vendor.d"
 fi
 
-# Launch the Electron binary with no-sandbox to allow the agent to manage background processes.
+# Launch binary
 exec /app/lib/antigravity/antigravity --no-sandbox --disable-setuid-sandbox "$@"
