@@ -38,6 +38,12 @@ jobs:
             echo "updated=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update Manifest
+        if: steps.upstream.outputs.updated == 'true'
+        run: |
+          yq -i ".modules[0].sources[0].url = \"${{ steps.upstream.outputs.url }}\"" com.google.Antigravity.yml
+          yq -i ".modules[0].sources[0].sha256 = \"${{ steps.upstream.outputs.sha }}\"" com.google.Antigravity.yml
+
       - name: Create Pull Request
         if: steps.upstream.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -56,12 +62,6 @@ jobs:
           commit-message: "chore: update Antigravity source to v${{ steps.upstream.outputs.version }}"
           add-paths: com.google.Antigravity.yml
           delete-branch: true
-
-      - name: Update Manifest (Local for PR tool)
-        if: steps.upstream.outputs.updated == 'true'
-        run: |
-          yq -i ".modules[0].sources[0].url = \"${{ steps.upstream.outputs.url }}\"" com.google.Antigravity.yml
-          yq -i ".modules[0].sources[0].sha256 = \"${{ steps.upstream.outputs.sha }}\"" com.google.Antigravity.yml
 
   on-failure:
     needs: check
