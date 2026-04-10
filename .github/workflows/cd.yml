@@ -9,6 +9,7 @@ on:
       - 'antigravity-host-exec'
       - '.github/workflows/cd.yml'
       - '.github/scripts/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
