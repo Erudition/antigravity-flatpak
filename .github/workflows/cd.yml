@@ -33,17 +33,35 @@ jobs:
 
       - name: Build Flatpak and Repository
         run: |
+          set -o pipefail
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
           # Build into OSTree repository. --disable-rofiles-fuse is critical for CI stability.
-          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml 2>&1 | tee build.log
           
           # Generate Static Deltas for faster updates and prune old objects
           flatpak build-update-repo --generate-static-deltas --prune repo
           
           # Create standalone bundle
           flatpak build-bundle repo antigravity.flatpak com.google.Antigravity latest
+
+      - name: Prepare Failure Logs
+        if: failure()
+        run: |
+          echo "### Release Build Failure Logs (Tail)" > failure_summary.md
+          echo "\`\`\`text" >> failure_summary.md
+          tail -n 200 build.log >> failure_summary.md
+          echo "\`\`\`" >> failure_summary.md
+          echo "" >> failure_summary.md
+          echo "Check full logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> failure_summary.md
+
+      - name: Upload Failure Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-failure-logs
+          path: failure_summary.md
 
       - name: Extract Metadata & Scrape Changelog
         id: meta
@@ -206,9 +224,14 @@ jobs:
 
   report-failure:
     needs: release
-    if: always() && needs.release.result == 'failure'
+    if: always() && needs.release.result == 'failure' && github.actor == 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
+      - name: Download Failure Logs
+        uses: actions/download-artifact@v4
+        with:
+          name: release-failure-logs
+          
       - name: Report Build Failure
         if: needs.release.outputs.scraper_status != 'failure'
         env:
@@ -217,8 +240,8 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Flatpak Build Failed" \
-            --body "The Flatpak build process failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label "bug,automation" || true
+            --body-file failure_summary.md \
+            --label "bug,automation,jules" || true
 
       - name: Report Scraper Failure
         if: needs.release.outputs.scraper_status == 'failure'
@@ -229,9 +252,5 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Changelog Scraper Failed: $ERROR_MSG" \
-            --body "The changelog scraper failed during the release. 
-            
-            **Error:** $ERROR_MSG
-            
-            Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label "bug,automation" || true
+            --body-file failure_summary.md \
+            --label "bug,automation,jules" || true
