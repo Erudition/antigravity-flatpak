@@ -35,7 +35,7 @@ jobs:
           flatpak build-update-repo --generate-static-deltas --prune repo
           
           # 4. Create preview bundle
-          flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity
+          flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity latest
 
       - name: Upload Preview Bundle
         uses: actions/upload-artifact@v4
