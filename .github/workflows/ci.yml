@@ -24,18 +24,37 @@ jobs:
 
       - name: Build Flatpak
         run: |
+          set -o pipefail
           # 1. Setup environment
           [ -f /etc/machine-id ] || dbus-uuidgen | tee /etc/machine-id
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
           # 2. Build into OSTree repo. --disable-rofiles-fuse is critical for CI stability.
-          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml
+          dbus-run-session -- flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean --repo=repo build-dir com.google.Antigravity.yml 2>&1 | tee build.log
           
           # 3. Update repo metadata with static deltas for performance
           flatpak build-update-repo --generate-static-deltas --prune repo
           
           # 4. Create preview bundle
-          flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity
+          flatpak build-bundle repo antigravity-preview.flatpak com.google.Antigravity latest
+
+      - name: Prepare Failure Logs
+        if: failure()
+        run: |
+          echo "### Build Failure Logs (Tail)" > failure_summary.md
+          echo "\`\`\`text" >> failure_summary.md
+          tail -n 200 build.log >> failure_summary.md
+          echo "\`\`\`" >> failure_summary.md
+          echo "" >> failure_summary.md
+          echo "Check full logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> failure_summary.md
+
+      - name: Upload Failure Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs-${{ github.event.pull_request.number }}
+          path: failure_summary.md
+
 
       - name: Upload Preview Bundle
         uses: actions/upload-artifact@v4
@@ -61,6 +80,11 @@ jobs:
     if: failure() && github.event.pull_request.user.login == 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
+      - name: Download Failure Logs
+        uses: actions/download-artifact@v4
+        with:
+          name: failure-logs-${{ github.event.pull_request.number }}
+          
       - name: Report Build Failure
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,5 +93,5 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "Automation Failure: Build failed for PR #$PR_NUMBER" \
-            --body "The automated build for the version update in PR #$PR_NUMBER failed. Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label "bug,automation" || true
+            --body-file failure_summary.md \
+            --label "bug,automation,jules" || true
