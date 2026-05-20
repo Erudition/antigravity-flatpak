@@ -66,7 +66,7 @@ jobs:
       - name: Extract Metadata & Scrape Changelog
         id: meta
         run: |
-          VERSION=$(grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+' com.google.Antigravity.yml)
+          VERSION=$(grep -oP '[0-9]+\.[0-9]+\.[0-9]+(?=-)' com.google.Antigravity.yml | head -n 1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
           if node .github/scripts/extract_changelog.js $VERSION > changelog.txt 2> scraper_error.log; then
