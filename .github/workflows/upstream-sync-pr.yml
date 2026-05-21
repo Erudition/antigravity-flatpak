@@ -1,0 +1,87 @@
+name: Create upstream sync PR
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily at 05:37 UTC.
+    # GitHub schedules use POSIX cron syntax.
+    - cron: "37 5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-sync-pr
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    env:
+      UPSTREAM_REPO: Erudition/antigravity-flatpak
+      UPSTREAM_BRANCH: latest
+      TARGET_BRANCH: latest
+      SYNC_BRANCH: sync/upstream-latest
+      GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "upstream-sync-bot"
+          git config user.email "upstream-sync-bot@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch origin "${TARGET_BRANCH}"
+          git fetch upstream "${UPSTREAM_BRANCH}"
+
+      - name: Stop if fork already contains upstream
+        run: |
+          if git merge-base --is-ancestor "upstream/${UPSTREAM_BRANCH}" "origin/${TARGET_BRANCH}"; then
+            echo "Fork ${TARGET_BRANCH} already contains upstream/${UPSTREAM_BRANCH}."
+            exit 0
+          fi
+
+      - name: Create or update sync branch
+        run: |
+          git switch -C "${SYNC_BRANCH}" "origin/${TARGET_BRANCH}"
+          git merge --no-ff --no-edit "upstream/${UPSTREAM_BRANCH}"
+          git push --force-with-lease origin "${SYNC_BRANCH}"
+
+      - name: Create or update PR
+        run: |
+          existing_pr="$(
+            gh pr list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --head "${SYNC_BRANCH}" \
+              --base "${TARGET_BRANCH}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          body="Automated PR to review changes from \`${UPSTREAM_REPO}:${UPSTREAM_BRANCH}\` before merging into this fork's protected \`${TARGET_BRANCH}\` branch."
+
+          if [[ -n "${existing_pr}" ]]; then
+            echo "PR already exists: #${existing_pr}"
+            gh pr edit "${existing_pr}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "Sync upstream ${UPSTREAM_BRANCH}" \
+              --body "${body}"
+            exit 0
+          fi
+
+          gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --base "${TARGET_BRANCH}" \
+            --head "${SYNC_BRANCH}" \
+            --title "Sync upstream ${UPSTREAM_BRANCH}" \
+            --body "${body}"
