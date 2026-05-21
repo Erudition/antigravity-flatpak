@@ -1,3 +1,4 @@
+# fork-local: touched once so GitHub registers this copied workflow
 name: CD Release
 
 on:
