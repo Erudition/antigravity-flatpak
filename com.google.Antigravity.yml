@@ -65,7 +65,8 @@ modules:
       - cp host-bash /app/bin/host-bash
       - cp antigravity-host-exec /app/bin/antigravity-host-exec
       - cp antigravity-wrapper /app/bin/antigravity
-      - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec /app/bin/antigravity /app/lib/antigravity/antigravity
+      - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec /app/bin/antigravity
+      - chmod +x /app/lib/antigravity/antigravity || chmod +x /app/lib/antigravity/antigravity-ide
       - ln -sf antigravity-host-exec /app/bin/git
       - ln -sf antigravity-host-exec /app/bin/chromium
       - ln -sf antigravity-host-exec /app/bin/node
