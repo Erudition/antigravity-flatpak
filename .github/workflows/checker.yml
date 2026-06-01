@@ -20,7 +20,7 @@ jobs:
           DATA=$(curl -s https://antigravity-auto-updater-974169037036.us-central1.run.app/api/update/linux-x64/stable/0/0)
           LATEST_URL=$(echo "$DATA" | jq -r '.url')
           LATEST_SHA=$(echo "$DATA" | jq -r '.sha256hash')
-          VERSION=$(echo "$LATEST_URL" | grep -oP 'stable/\K[0-9]+\.[0-9]+\.[0-9]+')
+          VERSION=$(echo "$DATA" | jq -r '.name')
 
           if [ -z "$LATEST_URL" ] || [ "$LATEST_URL" == "null" ]; then
             echo "Error: Could not fetch latest URL"
