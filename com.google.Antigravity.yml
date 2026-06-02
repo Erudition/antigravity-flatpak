@@ -59,13 +59,14 @@ modules:
     build-commands:
       - mkdir -p /app/lib/antigravity /app/bin /app/share/applications /app/share/icons/hicolor/scalable/apps /app/share/metainfo
       - perl -pi -e 's/eeijfnjmjelapkebgockoeaadonbchdd/ldpkpkgnnacjhjfkagclpmibpplpmmlf/g' resources/bin/language_server
+      - mv antigravity-ide-src /app/lib/antigravity-ide
       - cp -r . /app/lib/antigravity/
       - cp com.google.Antigravity.metainfo.xml /app/share/metainfo/com.google.Antigravity.metainfo.xml
       - cp host-bash /app/bin/host-bash
       - cp antigravity-host-exec /app/bin/antigravity-host-exec
       - cp antigravity-wrapper /app/bin/antigravity
       - chmod +x /app/bin/host-bash /app/bin/antigravity-host-exec /app/bin/antigravity
-      - chmod +x /app/lib/antigravity/antigravity || chmod +x /app/lib/antigravity/antigravity-ide
+      - chmod +x /app/lib/antigravity/antigravity /app/lib/antigravity-ide/antigravity-ide
       - ln -sf antigravity-host-exec /app/bin/git
       - ln -sf antigravity-host-exec /app/bin/chromium
       - ln -sf antigravity-host-exec /app/bin/node
@@ -87,11 +88,28 @@ modules:
         MimeType=x-scheme-handler/antigravity;
         StartupWMClass=antigravity
         EOF
+      - |
+        cat << 'EOF' > /app/share/applications/com.google.Antigravity.IDE.desktop
+        [Desktop Entry]
+        Name=Antigravity IDE
+        Comment=Google Antigravity IDE
+        Exec=antigravity --ide %u
+        Icon=com.google.Antigravity
+        Type=Application
+        Categories=Development;TextEditor;
+        MimeType=x-scheme-handler/antigravity;
+        StartupWMClass=antigravity-ide
+        EOF
       - cp com.google.Antigravity.svg /app/share/icons/hicolor/scalable/apps/com.google.Antigravity.svg
     sources:
       - type: archive
         url: https://storage.googleapis.com/antigravity-public/antigravity-hub/2.0.6-5413878570549248/linux-x64/Antigravity.tar.gz
         sha256: ad1e04535149b07c27030eb1ead40f4efda388cb39020bcbb9accdfb49e44cc5
+        strip-components: 1
+      - type: archive
+        url: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.0.3-6242596486512640/linux-x64/Antigravity%20IDE.tar.gz"
+        sha256: 00b5fd709fef02c9f81ab4edd77e8d5baf8b85842cc654fa016d7d0492cde803
+        dest: antigravity-ide-src
         strip-components: 1
       - type: file
         path: com.google.Antigravity.metainfo.xml
