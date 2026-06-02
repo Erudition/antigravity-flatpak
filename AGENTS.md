@@ -4,12 +4,13 @@ This document outlines the architecture and requirements for the Google Antigrav
 
 ## 1. Project Architecture (GitOps)
 The project uses a 3-workflow GitOps pipeline targeting the `latest` branch:
-- **`checker.yml`**: Polls the Google update API every 6 hours. If a new version is found, it creates a new branch and opens a Pull Request using `BOT_TOKEN`.
+- **`checker.yml`**: Polls the Google update APIs for BOTH the Agent Manager and the IDE every 6 hours. If a new version is found, it creates a new branch and opens a Pull Request using `BOT_TOKEN`.
 - **`ci.yml`**: Triggers on PRs to build and verify the Flatpak. Successful bot PRs are automatically approved and merged.
 - **`cd.yml`**: Triggers on pushes to `latest` (merges). It builds the app, scrapes official release notes, creates a GitHub Release, and deploys the OSTree repository to GitHub Pages.
 
 ## 2. Manifest Constraints (`com.google.Antigravity.yml`)
 - **Distro-Agnosticism**: The YAML manifest MUST remain generic. Do not hardcode specific usernames or mandatory Guix-only paths in `finish-args`.
+- **Dual App Architecture (2.0+)**: Antigravity 2.x decouples the "Agent Manager" and the "IDE" into separate downloads. The manifest MUST bundle both natively rather than relying on the post-install setup wizard (which fails in the sandbox). The `/app/bin/antigravity` wrapper handles routing (launching the IDE if `--ide` is passed, else the Agent Manager).
 - **Guix Auto-Detection**: Guix-specific environment setup (DBus, PATH, Guile Load Paths, Graphics drivers) MUST be handled dynamically in the `/app/bin/antigravity` startup script by checking for the existence of `/gnu/store`.
 - **Host Integration**: Tools like `git`, `node`, `pnpm`, etc., MUST be wrapped using `flatpak-spawn --host bash -l -c '[ -f ~/.bashrc ] && . ~/.bashrc; exec <cmd> "$@"'`. The `exec` prefix is mandatory for correct process management by the IDE. For the agent's shell, use the `/home/adroit/Scripts/antigravity-host-bash.sh` wrapper which handles `-c` injection correctly.
 - **Sandbox Stability**: 
