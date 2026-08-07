@@ -24,13 +24,14 @@ function getChangelog(targetVersion) {
         // Parse items manually since they are minified JS objects
         // items look like: [{title:"Improvements",accordion_items:[{text:"..."}]},{title:"Fixes",...}]
         const itemRegex = /\{title:"([^"]*)",accordion_items:\[(.*?)\]\}/g;
+        const bulletRegex = /\{text:"([^"]*)"\}/g;
         let itemMatch;
         while ((itemMatch = itemRegex.exec(itemsJson)) !== null) {
             const title = itemMatch[1];
             const listContent = itemMatch[2];
-            const bulletRegex = /\{text:"([^"]*)"\}/g;
             let bulletMatch;
             let bullets = [];
+            bulletRegex.lastIndex = 0;
             while ((bulletMatch = bulletRegex.exec(listContent)) !== null) {
                 bullets.push(bulletMatch[1]);
             }
