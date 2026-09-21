@@ -64,7 +64,7 @@ jobs:
 
   auto-approve:
     needs: build
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    if: github.event.pull_request.user.login == 'Erudition' && startsWith(github.head_ref, 'update/')
     runs-on: ubuntu-latest
     steps:
       - name: Approve and Merge Bot PR
@@ -77,7 +77,7 @@ jobs:
 
   on-build-failure:
     needs: build
-    if: failure() && github.event.pull_request.user.login == 'github-actions[bot]'
+    if: failure() && github.event.pull_request.user.login == 'Erudition' && startsWith(github.head_ref, 'update/')
     runs-on: ubuntu-latest
     steps:
       - name: Download Failure Logs
